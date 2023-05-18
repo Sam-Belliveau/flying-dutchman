@@ -17,7 +17,7 @@ fn main() {
     let mut turn = 0;
     let mut deadline = Instant::now();
     loop {
-        deadline += Duration::from_millis(500);
+        deadline += Duration::from_millis(1000);
         if board.side_to_move() == Color::White {
             turn += 1;
             print!("{}. ", turn);

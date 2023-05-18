@@ -60,7 +60,7 @@ impl Searcher {
         beta: Score,
         deadline: Instant,
     ) -> Option<SearchEval> {
-        if depth > 1 && Instant::now() >= deadline {
+        if depth > 3 && Instant::now() >= deadline {
             return None;
         }
 
@@ -129,7 +129,7 @@ impl Searcher {
     }
 
     pub fn min_search(&mut self, board: &Board) -> SearchEval {
-        self.alpha_beta_search(board, 1, MIN_SCORE, MAX_SCORE, Instant::now())
+        self.alpha_beta_search(board, 3, MIN_SCORE, MAX_SCORE, Instant::now())
             .unwrap()
     }
 
