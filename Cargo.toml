@@ -1,0 +1,11 @@
+[package]
+name = "flying-dutchman"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chess = "3.2.0"
+logos = "0.13.0"
+nohash-hasher = "0.1.3"
