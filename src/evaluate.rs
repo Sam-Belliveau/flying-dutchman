@@ -30,21 +30,14 @@ pub fn piece_value(piece: Piece, scale: Score) -> Score {
 
 pub fn evaluate(board: &Board) -> Score {
     piece_value(Piece::Pawn, TEMPO_BONUS)
-        + match board.side_to_move() {
-            Color::White => evaluate_for_white(board),
-            Color::Black => -evaluate_for_white(board),
+        + match board.status() {
+            BoardStatus::Checkmate => -MATE,
+            BoardStatus::Stalemate => MATE,
+            BoardStatus::Ongoing => match board.side_to_move() {
+                Color::White => 0 + evaluate_ongoing(board),
+                Color::Black => 0 - evaluate_ongoing(board),
+            },
         }
-}
-
-pub fn evaluate_for_white(board: &Board) -> Score {
-    match board.status() {
-        BoardStatus::Checkmate => match board.side_to_move() {
-            Color::White => -MATE,
-            Color::Black => MATE,
-        },
-        BoardStatus::Stalemate => -MATE,
-        BoardStatus::Ongoing => evaluate_ongoing(board),
-    }
 }
 
 fn evaluate_ongoing(board: &Board) -> Score {

@@ -11,7 +11,8 @@ use search::SearchEval;
 use crate::{search::Searcher, types::{from_score, from_depth}};
 
 fn print_result(title: &str, result: &SearchEval) {
-    println!("{}|   Depth:{:7.3}   |   Score{:7.3}   |   Move {}", title, from_depth(result.depth), from_score(result.score), result.bmove.map_or(String::from("None"), |m| m.to_string()));
+    print!("{}|   Depth:{:16.3}   |   Score{:16.3}   |   Move {}\r", title, from_depth(result.depth), from_score(result.score), result.bmove.map_or(String::from("None"), |m| m.to_string()));
+    std::io::stdout().flush().unwrap();
 }
 
 fn main() {
@@ -22,7 +23,7 @@ fn main() {
     let mut turn = 0;
     let mut game = String::from("");
     let mut deadline;
-    loop {
+    for _ in 0..500 {
         if board.side_to_move() == Color::White {
             turn += 1;
             game += &format!("{}. ", turn);
@@ -33,7 +34,7 @@ fn main() {
             Color::Black => print!("Black to move:\n"),
         }
 
-        deadline = Instant::now() + Duration::from_millis(20000);
+        deadline = Instant::now() + Duration::from_millis(30000);
         print_result("Init   ", engine.min_search(board, 0));
         while let Some(result) = engine.iterative_deepening_search(&board, deadline) {
             print_result("Iter   ", result);
@@ -43,16 +44,15 @@ fn main() {
         // println!("selecting");
         if let Some(choice) = engine.best_move(&board) {
             print_result("Final  ", engine.min_search(board, 0));
-            print!("------------------------------------------------------------\n");
+            print!("\n");
+            print!("-----------------------------------------------------------------------------\n");
             game += &format!("{} ", choice);
             print!("{}\n", game);
-            print!("------------------------------------------------------------");
-
-            std::io::stdout().flush().unwrap();
+            print!("-----------------------------------------------------------------------------\n");
             print!("\n\n");
             board = board.make_move_new(choice);
         } else {
-
+            print!("\n");
             match board.status() {
                 chess::BoardStatus::Checkmate => {
                     print!("Checkmate!\n");

@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use std::hash::BuildHasherDefault;
 use std::time::Instant;
 
 use chess::{BitBoard, Board, ChessMove, MoveGen, Piece, EMPTY};
-use nohash_hasher::NoHashHasher;
 
 use crate::qsearch::qsearch;
-use crate::types::{Depth, Score, DEPTH_JUMP, HASH_MAP_SIZE, MATE, MAX_SCORE, MIN_SCORE};
+use crate::types::{
+    Depth, Score, DEPTH_JUMP, HASH_MAP_SIZE, MATE, MATE_CUTOFF, MAX_SCORE, MIN_SCORE,
+};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SearchEval {
@@ -18,8 +18,8 @@ pub struct SearchEval {
 impl SearchEval {
     pub fn new(depth: Depth, score: Score, bmove: Option<ChessMove>) -> SearchEval {
         SearchEval {
-            depth: depth.max(0),
             score,
+            depth: depth.max(0),
             bmove,
         }
     }
@@ -29,7 +29,7 @@ impl SearchEval {
     }
 
     pub fn is_edge(&self) -> bool {
-        self.depth > 0 && self.bmove.is_none()
+        self.score.abs() >= MATE_CUTOFF
     }
 
     pub fn with_depth(&self, depth: Depth) -> SearchEval {
@@ -42,16 +42,14 @@ impl SearchEval {
 }
 
 pub struct Searcher {
-    eval_table: [HashMap<Board, SearchEval, BuildHasherDefault<NoHashHasher<u64>>>; 64],
+    eval_table: [HashMap<Board, SearchEval>; 64],
     ticker: usize,
 }
 
 impl Searcher {
     pub fn new() -> Searcher {
         Searcher {
-            eval_table: [(); 64].map(|_| {
-                HashMap::with_capacity_and_hasher(HASH_MAP_SIZE, BuildHasherDefault::default())
-            }),
+            eval_table: [(); 64].map(|_| HashMap::with_capacity(HASH_MAP_SIZE)),
             ticker: 0,
         }
     }
@@ -101,6 +99,7 @@ impl Searcher {
         deadline: Instant,
     ) -> Option<&SearchEval> {
         if depth > DEPTH_JUMP && Instant::now() >= deadline {
+            self.random_bool();
             return None;
         }
 
@@ -132,7 +131,7 @@ impl Searcher {
                 board.pieces(Piece::Bishop) | board.pieces(Piece::Knight),
             ),
             (3 * DEPTH_JUMP / 3, *board.pieces(Piece::Pawn)),
-            (3 * DEPTH_JUMP / 2, !EMPTY),
+            (4 * DEPTH_JUMP / 3, !EMPTY),
         ] {
             moves.set_iterator_mask(mask);
 
@@ -143,6 +142,7 @@ impl Searcher {
                 } else {
                     d / 5
                 };
+
                 let child = self.alpha_beta_search(result, depth - i, -beta, -alpha, deadline)?;
                 let eval = -child.score;
 
@@ -153,10 +153,10 @@ impl Searcher {
 
                 alpha = alpha.max(score);
 
-                if score >= MATE {
+                if score >= MATE_CUTOFF {
                     break 'search;
                 } else if score >= beta {
-                    Some(self.update(&board, SearchEval::new(depth, score, bmove)));
+                    return Some(self.update(&board, SearchEval::new(depth, score, bmove)));
                 }
             }
         }
@@ -196,6 +196,7 @@ impl Searcher {
     pub fn best_move(&mut self, board: &Board) -> Option<ChessMove> {
         for i in (Self::piece_count(board) + 1)..64 {
             self.eval_table[i].clear();
+            self.eval_table[i].shrink_to_fit();
         }
 
         self.min_search(*board, 0).bmove
