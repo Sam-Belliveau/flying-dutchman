@@ -1,20 +1,20 @@
-use crate::types::{Score, DRAW, MATE, SCORE_BASE};
-use chess::{Board, BoardStatus, Color, MoveGen, Piece, get_rook_moves, get_bishop_moves};
+use crate::types::{Score, MATE, SCORE_BASE};
+use chess::{get_king_moves, BitBoard, Board, BoardStatus, Color, MoveGen, Piece, EMPTY};
 
 // Value of having a piece on the board
 const POSSES_VALUE: Score = SCORE_BASE;
-
-// The cost of a piece when it is pinned
-const PINNED_PENALTY: Score = -SCORE_BASE;
 
 // Value of attacking an enemy piece
 const ATTACK_VALUE: Score = SCORE_BASE / 4;
 
 // Value of being able to move to a vacant square
-const HOLD_VALUE: Score = SCORE_BASE / 8;
+const HOLD_VALUE: Score = SCORE_BASE / 10;
 
-// Value of having a square be visible to the king
-const KING_VIS_PENALTY: Score = -SCORE_BASE / 4;
+// Value of being able to move to a vacant square
+const KING_HOLD_VALUE: Score = SCORE_BASE / 40;
+
+// Value of being the side evaluated, helps with tempo
+const TEMPO_BONUS: Score = 1 * SCORE_BASE;
 
 pub fn piece_value(piece: Piece, scale: Score) -> Score {
     scale
@@ -29,10 +29,11 @@ pub fn piece_value(piece: Piece, scale: Score) -> Score {
 }
 
 pub fn evaluate(board: &Board) -> Score {
-    match board.side_to_move() {
-        Color::White => evaluate_for_white(board),
-        Color::Black => -evaluate_for_white(board),
-    }
+    piece_value(Piece::Pawn, TEMPO_BONUS)
+        + match board.side_to_move() {
+            Color::White => evaluate_for_white(board),
+            Color::Black => -evaluate_for_white(board),
+        }
 }
 
 pub fn evaluate_for_white(board: &Board) -> Score {
@@ -41,7 +42,7 @@ pub fn evaluate_for_white(board: &Board) -> Score {
             Color::White => -MATE,
             Color::Black => MATE,
         },
-        BoardStatus::Stalemate => DRAW,
+        BoardStatus::Stalemate => -MATE,
         BoardStatus::Ongoing => evaluate_ongoing(board),
     }
 }
@@ -51,8 +52,6 @@ fn evaluate_ongoing(board: &Board) -> Score {
 
     score += evaluate_pieces(board);
     score += evaluate_moves(board);
-    score += evaluate_pins(board);
-    score += evaluate_king_vis(board);
 
     score
 }
@@ -87,16 +86,24 @@ fn evaluate_moves(board: &Board) -> Score {
         let mut score = 0;
 
         if let Some(moves) = board {
+            let targets = get_king_moves(moves.king_square(!moves.side_to_move()));
             for movement in MoveGen::new_legal(&moves) {
                 let dest = movement.get_dest();
 
+                let king = targets & BitBoard::from_square(dest) != EMPTY;
                 match moves.piece_on(dest) {
                     Some(piece) => {
                         score += piece_value(piece, ATTACK_VALUE);
+                        if king {
+                            score += piece_value(piece, KING_HOLD_VALUE);
+                        }
                     }
 
                     None => {
                         score += piece_value(Piece::Pawn, HOLD_VALUE);
+                        if king {
+                            score += piece_value(Piece::Pawn, KING_HOLD_VALUE);
+                        }
                     }
                 }
             }
@@ -111,42 +118,4 @@ fn evaluate_moves(board: &Board) -> Score {
     let black_score = evaluate_moves_side(black_board);
 
     white_score - black_score
-}
-
-pub fn evaluate_pins(board: &Board) -> Score {
-    fn evaluate_pins_side(board_opt: Option<Board>) -> Score {
-        let mut score = 0;
-
-        if let Some(board) = board_opt {
-            for square in *board.pinned() {
-                if let Some(piece) = board.piece_on(square) {
-                    match board.color_on(square) {
-                        Some(Color::White) => score += piece_value(piece, PINNED_PENALTY),
-                        Some(Color::Black) => score -= piece_value(piece, PINNED_PENALTY),
-                        None => {}
-                    }
-                }
-            }
-        }
-
-        score
-    }
-    let (white_board, black_board) = split_board(board.clone());
-
-    evaluate_pins_side(white_board) + evaluate_pins_side(black_board)
-}
-
-pub fn evaluate_king_vis(board: &Board) -> Score {
-    let white_king = board.king_square(Color::White);
-    let black_king = board.king_square(Color::Black);
-
-    let pieces = *board.combined();
-    let white_king = get_rook_moves(white_king, pieces) | get_bishop_moves(white_king, pieces);
-    let black_king = get_rook_moves(black_king, pieces) | get_bishop_moves(black_king, pieces);
-
-    let mut score = 0;
-    score += white_king.popcnt() as Score * piece_value(Piece::Pawn, KING_VIS_PENALTY);
-    score -= black_king.popcnt() as Score * piece_value(Piece::Pawn, KING_VIS_PENALTY);
-
-    score
 }
