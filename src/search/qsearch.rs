@@ -1,14 +1,13 @@
 use chess::{get_bishop_moves, get_knight_moves, get_rook_moves, Board, MoveGen, EMPTY};
 
-use crate::{
-    evaluate::evaluate,
-    types::{Score, MAX_SCORE, MIN_SCORE},
-};
+use crate::evaluate::{evaluate, Score};
 
-fn alpha_beta_search(board: Board, mut alpha: Score, beta: Score) -> Score {
+use super::alpha_beta::{AlphaBeta, NegaMaxResult::*};
+
+fn alpha_beta_search(board: Board, mut window: AlphaBeta) -> Score {
     let eval = evaluate(&board);
-    alpha = alpha.max(eval);
-    if eval >= beta {
+
+    if let BetaPrune { beta } = window.negamax(eval) {
         return beta;
     }
 
@@ -32,19 +31,18 @@ fn alpha_beta_search(board: Board, mut alpha: Score, beta: Score) -> Score {
             let new_board = board.make_move_new(movement);
 
             if good || (*new_board.checkers() != EMPTY) {
-                let eval = -alpha_beta_search(new_board, -beta, -alpha);
+                let eval = -alpha_beta_search(new_board, -window);
 
-                alpha = alpha.max(eval);
-                if alpha >= beta {
+                if let BetaPrune { beta } = window.negamax(eval) {
                     return beta;
                 }
             }
         }
     }
 
-    alpha
+    window.alpha()
 }
 
 pub fn qsearch(board: Board) -> Score {
-    alpha_beta_search(board, MIN_SCORE, MAX_SCORE)
+    alpha_beta_search(board, AlphaBeta::new())
 }

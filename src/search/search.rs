@@ -1,10 +1,13 @@
 use chess::{BitBoard, Board, ChessMove, MoveGen, Piece, EMPTY};
 
-use crate::deadline::Deadline;
-use crate::qsearch::qsearch;
+use crate::evaluate::{Score, MATE_CUTOFF};
+use crate::search::qsearch::qsearch;
 use crate::transposition::table::TTable;
 use crate::transposition::table_entry::TTableEntry;
-use crate::types::{Depth, Score, MATE_CUTOFF, MAX_SCORE, MIN_SCORE};
+
+use super::alpha_beta::{AlphaBeta, NegaMaxResult::*, ProbeResult::*};
+use super::deadline::Deadline;
+use super::Depth;
 
 pub struct Searcher {
     table: TTable,
@@ -21,8 +24,7 @@ impl Searcher {
         &mut self,
         board: Board,
         depth: Depth,
-        mut alpha: Score,
-        beta: Score,
+        mut window: AlphaBeta,
         deadline: &Deadline,
     ) -> Option<Score> {
         let entry = self.table.get(&board);
@@ -62,42 +64,48 @@ impl Searcher {
                 let result = board.make_move_new(movement);
 
                 let eval = if bmove.is_none() {
-                    -self.alpha_beta_search(result, depth - 1, -beta, -alpha, deadline)?
+                    -self.alpha_beta_search(result, depth - 1, -window, deadline)?
                 } else {
-                    let eval =
-                        -self.alpha_beta_search(result, depth - 1, -alpha - 1, -alpha, deadline)?;
-                    if alpha < eval && eval < beta && depth > 1 {
-                        eval.max(-self.alpha_beta_search(
-                            result,
-                            depth - 1,
-                            -beta,
-                            -eval,
-                            deadline,
-                        )?)
+                    let eval = -self.alpha_beta_search(
+                        result,
+                        depth - 1,
+                        -window.null_window(),
+                        deadline,
+                    )?;
+                    if let (true, Contained { .. }) = (depth > 1, window.probe(eval)) {
+                        eval.max(-self.alpha_beta_search(result, depth - 1, -window, deadline)?)
                     } else {
                         eval
                     }
                 };
 
-                if eval > alpha {
-                    alpha = eval;
-                    bmove = Some(movement);
+                match window.negamax(eval) {
+                    Worse { .. } => {}
+                    Matches { .. } => {
+                        // Do not replace best move if there is no improvement
+                    }
+                    NewBest { .. } => {
+                        bmove = Some(movement);
+                    }
+                    BetaPrune { .. } => {
+                        bmove = Some(movement);
 
-                    if alpha >= MATE_CUTOFF {
-                        break 'search;
-                    } else if alpha >= beta {
-                        self.table
-                            .update(&board, TTableEntry::new(depth, alpha, bmove));
-                        return Some(alpha);
+                        if eval >= MATE_CUTOFF {
+                            break 'search;
+                        } else {
+                            self.table
+                                .update(&board, TTableEntry::new(depth, eval, bmove));
+                            return Some(eval);
+                        }
                     }
                 }
             }
         }
 
         self.table
-            .save(&board, TTableEntry::new(depth, alpha, bmove));
+            .save(&board, TTableEntry::new(depth, window.alpha(), bmove));
 
-        Some(alpha)
+        Some(window.alpha())
     }
 
     pub fn depth_deadline_search(
@@ -106,8 +114,7 @@ impl Searcher {
         depth: Depth,
         deadline: &Deadline,
     ) -> Option<Score> {
-        self.table.mark();
-        self.alpha_beta_search(board, depth, MIN_SCORE, MAX_SCORE, deadline)
+        self.alpha_beta_search(board, depth, AlphaBeta::new(), deadline)
     }
 
     pub fn min_search(&mut self, board: &Board) -> TTableEntry {
@@ -117,10 +124,13 @@ impl Searcher {
             }
         }
 
-        self.table.mark();
-        self.alpha_beta_search(*board, 1, MIN_SCORE, MAX_SCORE, &Deadline::none())
+        self.alpha_beta_search(*board, 1, AlphaBeta::new(), &Deadline::none())
             .expect("Expected Complete Search");
         return *self.table.get(&board).unwrap();
+    }
+
+    pub fn opt_search(&mut self, board: &Board) -> Option<&TTableEntry> {
+        self.table.get(&board)
     }
 
     pub fn iterative_deepening_search(
@@ -138,8 +148,7 @@ impl Searcher {
 
     pub fn best_move(&mut self, board: &Board) -> Option<ChessMove> {
         let best_move = self.min_search(board).best_move;
-        let max_size = 1000 * 1000 * 1000; // Gig
-        self.table.sweep(max_size);
+        self.table.sweep();
         best_move
     }
 

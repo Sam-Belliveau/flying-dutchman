@@ -1,6 +1,9 @@
 use chess::ChessMove;
 
-use crate::types::{Depth, Score, MATE_CUTOFF};
+use crate::{
+    evaluate::{Score, MATE_CUTOFF},
+    search::Depth,
+};
 
 pub type Marker = u64;
 
@@ -9,7 +12,7 @@ pub struct TTableEntry {
     pub depth: Depth,
     pub score: Score,
     pub best_move: Option<ChessMove>,
-    marker: Marker,
+    pub marker: Marker,
 }
 
 impl TTableEntry {
@@ -52,12 +55,12 @@ impl TTableEntry {
         }
     }
 
-    pub fn set_marker(&mut self, marker: Marker) -> &mut Self {
-        self.marker = marker;
-        self
-    }
-
-    pub fn is_valid(&self, marker: Marker) -> bool {
-        self.marker >= marker
+    pub fn set_marker(&mut self, marker: Marker) -> bool {
+        if self.marker < marker {
+            self.marker = marker;
+            true
+        } else {
+            false
+        }
     }
 }
