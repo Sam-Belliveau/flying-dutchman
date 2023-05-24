@@ -2,7 +2,7 @@
 
 ## About
 
-"The Flying Dutchman" is a Chess Engine written in Rust, designed with a focus on safety and readability above all else. This project was created as an homage to my time spent at Hofstra University, and it represents a significant journey in my academic progression as an Electrical and Computer Engineering (ECE) major. After transferring to Cornell University, I continued developing this project as both an educational tool and a challenge to create a sophisticated chess bot based on fundamental computer science principles.
+"The Flying Dutchman" is a Chess Engine written in Rust, designed with a focus on safety and readability above all else. This project was created as an homage to my time spent at Hofstra University. I developed this project as both an educational tool and a challenge to create a sophisticated chess bot based on fundamental computer science principles.
 
 While there are many robust and powerful chess engines out there (like Stockfish), the primary goal of "The Flying Dutchman" is not to outperform these engines, but to serve as a resource for those interested in understanding the underlying workings of a chess engine. This project is essentially a fusion of my passion for programming and the strategic complexity of chess, despite me being admittedly not very good at the game.
 
