@@ -5,7 +5,7 @@ use crate::{
     search::Depth,
 };
 
-pub type Marker = u64;
+use super::markers::Marker;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TTableEntry {
@@ -16,17 +16,22 @@ pub struct TTableEntry {
 }
 
 impl TTableEntry {
-    pub fn new(depth: Depth, score: Score, bmove: Option<ChessMove>) -> TTableEntry {
+    pub fn new(depth: Depth, score: Score, best_move: ChessMove) -> TTableEntry {
         TTableEntry {
             score,
             depth: depth.max(0),
-            best_move: bmove,
+            best_move: Some(best_move),
             marker: 0,
         }
     }
 
     pub fn leaf(score: Score) -> TTableEntry {
-        TTableEntry::new(0, score, None)
+        TTableEntry {
+            score,
+            depth: 0,
+            best_move: None,
+            marker: 0,
+        }
     }
 
     pub fn is_edge(&self) -> bool {
@@ -34,33 +39,26 @@ impl TTableEntry {
     }
 
     pub fn update(&mut self, result: TTableEntry) {
-        if self.depth <= result.depth && result.best_move.is_some() {
-            *self = result;
-        }
-    }
-
-    pub fn lazy_update(&mut self, result: &TTableEntry) {
-        if self.depth <= result.depth && self.score < result.score && result.best_move.is_some() {
+        if self.depth <= result.depth {
+            self.depth = result.depth;
             self.score = result.score;
             self.best_move = result.best_move;
         }
     }
 
-    pub fn with_depth(&self, depth: Depth) -> TTableEntry {
+    pub fn lazy_update(&mut self, result: &TTableEntry) {
+        if self.depth <= result.depth && self.score < result.score {
+            self.score = result.score;
+            self.best_move = result.best_move;
+        }
+    }
+
+    pub fn with_depth(self, depth: Depth) -> TTableEntry {
         TTableEntry {
             depth,
             score: self.score,
             best_move: self.best_move,
             marker: self.marker,
-        }
-    }
-
-    pub fn set_marker(&mut self, marker: Marker) -> bool {
-        if self.marker < marker {
-            self.marker = marker;
-            true
-        } else {
-            false
         }
     }
 }

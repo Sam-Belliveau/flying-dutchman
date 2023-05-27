@@ -2,7 +2,9 @@ use std::{io::Write, time::Duration};
 
 use chess::{Board, Color};
 
-use crate::{evaluate::score_to_cp, search::{search::Searcher, deadline::Deadline},
+use crate::{
+    evaluate::score_to_cp,
+    search::{deadline::Deadline, search::Searcher},
     transposition::table_entry::TTableEntry,
 };
 
@@ -40,8 +42,15 @@ pub fn play_self() {
 
         deadline = Deadline::timeout(Duration::from_millis(2000));
         print_result("Init   ", engine.min_search(&board));
-        while let Some(_) = engine.iterative_deepening_search(&board, &deadline) {
+        let mut presult = None;
+        while let Some(result) = engine.iterative_deepening_search(&board, &deadline) {
             print_result("Iter   ", engine.min_search(&board));
+
+            if presult == Some(result) {
+                break;
+            } else {
+                presult = Some(result);
+            }
         }
 
         // let depth = engine.cached_eval(&board).unwrap().depth;

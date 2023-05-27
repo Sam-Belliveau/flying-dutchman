@@ -32,9 +32,10 @@ pub enum UCIToken {
 }
 
 #[derive(Logos, Debug, PartialEq)]
+#[logos(skip r"[ \t\n\f]+")]
 pub enum UCIGoToken {
     #[regex(r"[0-9]+", |lex| lex.slice().parse().ok())]
-    Number(i64),
+    Number(u64),
 
     #[regex(r"[a-h][1-8][a-h][1-8]+", |lex| ChessMove::from_str(lex.slice()).ok())]
     Move(ChessMove),

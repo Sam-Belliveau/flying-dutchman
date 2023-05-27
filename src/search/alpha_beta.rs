@@ -53,6 +53,13 @@ impl AlphaBeta {
         }
     }
 
+    pub fn raise_min(&self, score: Score) -> AlphaBeta {
+        AlphaBeta {
+            alpha: self.alpha.max(score),
+            beta: self.beta,
+        }
+    }
+
     pub fn null_window(&self) -> AlphaBeta {
         AlphaBeta {
             alpha: self.alpha,

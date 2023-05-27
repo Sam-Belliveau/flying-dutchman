@@ -8,6 +8,7 @@ use chess::{Board, ChessMove};
 use logos::Logos;
 
 use super::{
+    go_options::GoOptions,
     sync,
     thread::UCIThread,
     tokens::UCIToken::{self, *},
@@ -42,10 +43,11 @@ pub fn uci_loop() {
                 }
                 Ok(Go) => {
                     // Start searching for a move.
-                    thread.search(board);
-
-                    let _info = lexer.remainder().trim();
+                    let info = GoOptions::build(lexer.remainder().trim());
+                    let deadline = info.to_deadline(&board);
                     while let Some(_) = lexer.next() {}
+
+                    thread.search(board, deadline);
                 }
                 Ok(Stop) => {
                     thread.stop();
@@ -65,7 +67,7 @@ pub fn uci_loop() {
                             let moves = info.trim_start_matches("startpos moves ");
                             for chess_move in moves.split_whitespace() {
                                 if let Ok(chess_move) = ChessMove::from_str(chess_move) {
-                                    board.make_move_new(chess_move);
+                                    board = board.make_move_new(chess_move);
                                 }
                             }
                         }

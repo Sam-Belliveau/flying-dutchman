@@ -73,17 +73,14 @@ impl Searcher {
                         deadline,
                     )?;
                     if let (true, Contained { .. }) = (depth > 1, window.probe(eval)) {
-                        eval.max(-self.alpha_beta_search(result, depth - 1, -window, deadline)?)
+                        eval.max(-self.alpha_beta_search(result, depth - 1, -window.raise_min(eval), deadline)?)
                     } else {
                         eval
                     }
                 };
 
                 match window.negamax(eval) {
-                    Worse { .. } => {}
-                    Matches { .. } => {
-                        // Do not replace best move if there is no improvement
-                    }
+                    Worse { .. } | Matches { .. } => {}
                     NewBest { .. } => {
                         bmove = Some(movement);
                     }
@@ -94,7 +91,7 @@ impl Searcher {
                             break 'search;
                         } else {
                             self.table
-                                .update(&board, TTableEntry::new(depth, eval, bmove));
+                                .update(&board, TTableEntry::new(depth, eval, movement));
                             return Some(eval);
                         }
                     }
@@ -102,8 +99,10 @@ impl Searcher {
             }
         }
 
-        self.table
-            .save(&board, TTableEntry::new(depth, window.alpha(), bmove));
+        if let Some(best_move) = bmove {
+            self.table
+                .save(&board, TTableEntry::new(depth, window.alpha(), best_move));
+        }
 
         Some(window.alpha())
     }
@@ -139,6 +138,10 @@ impl Searcher {
         deadline: &Deadline,
     ) -> Option<Score> {
         let current = self.min_search(board);
+
+        self.table.refresh_pv(*board);
+        self.table.sweep();
+
         if current.is_edge() {
             None
         } else {
@@ -148,7 +151,6 @@ impl Searcher {
 
     pub fn best_move(&mut self, board: &Board) -> Option<ChessMove> {
         let best_move = self.min_search(board).best_move;
-        self.table.sweep();
         best_move
     }
 

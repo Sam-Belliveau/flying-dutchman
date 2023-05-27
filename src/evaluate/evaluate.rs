@@ -47,7 +47,7 @@ fn evaluate_moves(board: &Board) -> Score {
 
         if let Some(moves) = board {
             let king_area = get_king_moves(moves.king_square(!moves.side_to_move()));
-            for movement in MoveGen::new_legal(&moves) {
+            for movement in MoveGen::new_legal(moves) {
                 let dest = movement.get_dest();
                 let near_king = (king_area & BitBoard::from_square(dest)) != EMPTY;
 

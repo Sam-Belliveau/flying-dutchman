@@ -1,7 +1,6 @@
 use std::{
     sync::{Arc, Mutex},
     thread,
-    time::Duration,
 };
 
 use chess::Board;
@@ -22,21 +21,21 @@ pub struct UCIThread {
 impl UCIThread {
     pub fn new() -> UCIThread {
         UCIThread {
-            deadline: Arc::new(Deadline::asyncronous()),
+            deadline: Arc::new(Deadline::none()),
             board: Board::default(),
             engine: Arc::new(Mutex::new(Searcher::new())),
             search_thread: None,
         }
     }
 
-    pub fn search(&mut self, board: Board) {
-        self.deadline.reset();
+    pub fn search(&mut self, board: Board, deadline: Deadline) {
+        self.deadline = deadline.into();
         self.board = board.clone();
 
         self.search_thread = Some({
             let engine = Arc::clone(&self.engine);
             let board = self.board.clone();
-            let deadline = Deadline::timeout(Duration::from_secs(5)); //self.deadline.clone();
+            let deadline = Arc::clone(&self.deadline);
             thread::spawn(move || match engine.lock() {
                 Ok(mut engine) => {
                     while let Some(_) = engine.iterative_deepening_search(&board, &deadline) {
