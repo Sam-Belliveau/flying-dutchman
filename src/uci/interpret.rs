@@ -45,7 +45,7 @@ pub fn uci_loop() {
                     // Start searching for a move.
                     let info = GoOptions::build(lexer.remainder().trim());
                     let deadline = info.to_deadline(&board);
-                    while let Some(_) = lexer.next() {}
+                    for _ in lexer.by_ref() {}
 
                     thread.search(board, deadline);
                 }
@@ -59,7 +59,7 @@ pub fn uci_loop() {
                 }
                 Ok(Position) => {
                     let info = lexer.remainder().trim();
-                    while let Some(_) = lexer.next() {}
+                    for _ in lexer.by_ref() {}
 
                     if info.starts_with("startpos") {
                         board = Board::default();
@@ -73,7 +73,7 @@ pub fn uci_loop() {
                         }
                     } else if info.starts_with("fen") {
                         let fen = info.trim_start_matches("fen ");
-                        if let Ok(new_board) = Board::from_str(&fen.trim()) {
+                        if let Ok(new_board) = Board::from_str(fen.trim()) {
                             board = new_board;
                         }
 

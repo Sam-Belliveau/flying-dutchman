@@ -24,7 +24,7 @@ impl TTable {
     pub fn save(&mut self, board: &Board, result: TTableEntry) {
         self.queue.count(
             self.table
-                .entry(board.clone())
+                .entry(*board)
                 .and_modify(|e| e.update(result))
                 .or_insert(result),
         );
@@ -33,7 +33,7 @@ impl TTable {
     pub fn update(&mut self, board: &Board, result: TTableEntry) {
         self.queue.count(
             self.table
-                .entry(board.clone())
+                .entry(*board)
                 .and_modify(|e| e.lazy_update(&result))
                 .or_insert(result.with_depth(0)),
         );

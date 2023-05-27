@@ -30,15 +30,15 @@ impl UCIThread {
 
     pub fn search(&mut self, board: Board, deadline: Deadline) {
         self.deadline = deadline.into();
-        self.board = board.clone();
+        self.board = board;
 
         self.search_thread = Some({
             let engine = Arc::clone(&self.engine);
-            let board = self.board.clone();
+            let board = self.board;
             let deadline = Arc::clone(&self.deadline);
             thread::spawn(move || match engine.lock() {
                 Ok(mut engine) => {
-                    while let Some(_) = engine.iterative_deepening_search(&board, &deadline) {
+                    while engine.iterative_deepening_search(&board, &deadline).is_some() {
                         let info = engine.min_search(&board);
                         if let Some(best_move) = info.best_move {
                             println!(
@@ -54,7 +54,7 @@ impl UCIThread {
                             score_to_cp(info.score)
                         );
 
-                        let mut pv_board = board.clone();
+                        let mut pv_board = board;
                         while let Some(chess_move) =
                             engine.opt_search(&pv_board).and_then(|f| f.best_move)
                         {

@@ -117,7 +117,7 @@ impl Searcher {
     }
 
     pub fn min_search(&mut self, board: &Board) -> TTableEntry {
-        if let Some(result) = self.table.get(&board) {
+        if let Some(result) = self.table.get(board) {
             if result.depth > 0 {
                 return *result;
             }
@@ -125,11 +125,11 @@ impl Searcher {
 
         self.alpha_beta_search(*board, 1, AlphaBeta::new(), &Deadline::none())
             .expect("Expected Complete Search");
-        return *self.table.get(&board).unwrap();
+        return *self.table.get(board).unwrap();
     }
 
     pub fn opt_search(&mut self, board: &Board) -> Option<&TTableEntry> {
-        self.table.get(&board)
+        self.table.get(board)
     }
 
     pub fn iterative_deepening_search(
@@ -150,8 +150,8 @@ impl Searcher {
     }
 
     pub fn best_move(&mut self, board: &Board) -> Option<ChessMove> {
-        let best_move = self.min_search(board).best_move;
-        best_move
+        
+        self.min_search(board).best_move
     }
 
     pub fn memory_bytes(&self) -> usize {

@@ -9,8 +9,8 @@ use crate::{
 };
 
 fn print_result(title: &str, result: TTableEntry) {
-    print!(
-        "{}|   Depth:{:16.3}   |   Score{:16.3}   |   Move {}\n",
+    println!(
+        "{}|   Depth:{:16.3}   |   Score{:16.3}   |   Move {}",
         title,
         result.depth,
         score_to_cp(result.score),
@@ -36,8 +36,8 @@ pub fn play_self() {
         }
 
         match board.side_to_move() {
-            Color::White => print!("White to move:\n"),
-            Color::Black => print!("Black to move:\n"),
+            Color::White => println!("White to move:"),
+            Color::Black => println!("Black to move:"),
         }
 
         deadline = Deadline::timeout(Duration::from_millis(2000));
@@ -57,33 +57,33 @@ pub fn play_self() {
         // println!("selecting");
         if let Some(choice) = engine.best_move(&board) {
             print_result("Final  ", engine.min_search(&board));
-            print!("\n");
-            print!(
-                "-----------------------------------------------------------------------------\n"
+            println!();
+            println!(
+                "-----------------------------------------------------------------------------"
             );
             game += &format!("{} ", choice);
-            print!("{}\n", game);
-            print!(
-                "-----------------------------------------------------------------------------\n"
+            println!("{}", game);
+            println!(
+                "-----------------------------------------------------------------------------"
             );
-            print!("Memory Bytes: {}\n", engine.memory_bytes());
+            println!("Memory Bytes: {}", engine.memory_bytes());
             print!("\n\n");
             board = board.make_move_new(choice);
         } else {
-            print!("\n");
+            println!();
             match board.status() {
                 chess::BoardStatus::Checkmate => {
-                    print!("Checkmate!\n");
+                    println!("Checkmate!");
                     match board.side_to_move() {
-                        Color::White => print!("Black wins!\n"),
-                        Color::Black => print!("White wins!\n"),
+                        Color::White => println!("Black wins!"),
+                        Color::Black => println!("White wins!"),
                     }
                 }
                 chess::BoardStatus::Stalemate => {
-                    print!("Stalemate!\n");
+                    println!("Stalemate!");
                 }
                 chess::BoardStatus::Ongoing => {
-                    print!("Error!\n");
+                    println!("Error!");
                 }
             }
             break;

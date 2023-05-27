@@ -1,8 +1,0 @@
-uci
-isready
-stop
-ucinewgame
-isready
-position fen r5k1/p1p5/b3pp2/3p4/1b1P1P2/2N1P1Pq/PPPK3P/R1B4R w - - 1 19
-go movetime 3000
-quit
