@@ -5,8 +5,8 @@ use chess::Board;
 use super::{markers::MarkerQueue, table_entry::TTableEntry};
 use nohash_hasher::NoHashHasher;
 
-const SLICE_SIZE: usize = 100000;
-const TABLE_SIZE: usize = 1000 * 1000 * 1000;
+const SLICE_SIZE: usize = 250000;
+const TABLE_SIZE: usize = 2500 * 1000 * 1000;
 
 pub struct TTable {
     table: HashMap<Board, TTableEntry, BuildHasherDefault<NoHashHasher<u64>>>,
@@ -55,7 +55,6 @@ impl TTable {
     }
 
     pub fn sweep(&mut self) {
-        assert_eq!(self.queue.total(), self.table.len());
         if self.memory_bytes() > TABLE_SIZE {
             let quota = self.memory_bytes() - TABLE_SIZE;
             let mut amount = 0;
@@ -64,12 +63,10 @@ impl TTable {
             while let (Some((marker, count)), true) = (self.queue.pop(), amount < quota) {
                 let bytes = Self::size_to_bytes(count);
                 amount += bytes;
-                sweeper = marker;
-
-                println!("Cleared Marker {} to save {} bytes", marker, bytes);
+                sweeper = marker + 1;
             }
 
-            self.table.retain(|_, v| v.marker > sweeper);
+            self.table.retain(|_, v| sweeper < v.marker);
         }
     }
 

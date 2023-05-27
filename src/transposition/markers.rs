@@ -24,7 +24,7 @@ impl MarkerQueue {
     }
 
     fn get(&mut self, marker: Marker) -> Option<&mut usize> {
-        if marker < self.begin {
+        if marker == 0 {
             None
         } else {
             Some(&mut self.queue[(marker - self.begin) as usize])
@@ -59,9 +59,5 @@ impl MarkerQueue {
         } else {
             None
         }
-    }
-
-    pub fn total(&self) -> usize {
-        self.queue.iter().sum()
     }
 }

@@ -150,7 +150,6 @@ impl Searcher {
     }
 
     pub fn best_move(&mut self, board: &Board) -> Option<ChessMove> {
-        
         self.min_search(board).best_move
     }
 

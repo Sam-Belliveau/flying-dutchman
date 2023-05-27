@@ -1,5 +1,8 @@
 use std::{
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
     thread,
 };
 
@@ -29,6 +32,10 @@ impl UCIThread {
     }
 
     pub fn search(&mut self, board: Board, deadline: Deadline) {
+        if self.search_thread.is_some() {
+            panic!("Search thread already running");
+        }
+
         self.deadline = deadline.into();
         self.board = board;
 
@@ -38,19 +45,15 @@ impl UCIThread {
             let deadline = Arc::clone(&self.deadline);
             thread::spawn(move || match engine.lock() {
                 Ok(mut engine) => {
-                    while engine.iterative_deepening_search(&board, &deadline).is_some() {
+                    while engine
+                        .iterative_deepening_search(&board, &deadline)
+                        .is_some()
+                    {
                         let info = engine.min_search(&board);
-                        if let Some(best_move) = info.best_move {
-                            println!(
-                                "info depth {} currmove {} currmovenumber {}",
-                                info.depth, best_move, 1
-                            );
-                        }
                         print!(
-                            "info depth {} seldepth {} multipv 1 score cp {} hashful 0 tbhits 0 time {} pv",
+                            "info depth {} seldepth {} multipv 1 score cp {} pv",
                             info.depth,
                             info.depth,
-                            2,
                             score_to_cp(info.score)
                         );
 
