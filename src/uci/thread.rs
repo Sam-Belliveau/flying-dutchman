@@ -29,8 +29,12 @@ impl UCIThread {
     }
 
     pub fn search(&mut self, board: Board, deadline: Deadline) {
-        if self.search_thread.is_some() {
-            panic!("Search thread already running");
+        if let Some(thread) = &self.search_thread {
+            if thread.is_finished() {
+                self.search_thread = None;
+            } else {
+                panic!("Search thread already running");
+            }
         }
 
         self.deadline = deadline.into();
@@ -42,10 +46,15 @@ impl UCIThread {
             let deadline = Arc::clone(&self.deadline);
             thread::spawn(move || match engine.lock() {
                 Ok(mut engine) => {
+                    let mut reps = 0;
                     let mut presult = None;
                     while let Some(result) = engine.iterative_deepening_search(&board, &deadline) {
                         if presult == Some(result) {
-                            break;
+                            reps += 1;
+
+                            if reps >= 16 {
+                                break;
+                            }
                         } else {
                             presult = Some(result);
                         }
