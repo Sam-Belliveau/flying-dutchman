@@ -15,7 +15,7 @@ pub const HOLD: Score = SCORE_BASE / 8;
 pub const NEAR_KING: Score = SCORE_BASE / 32;
 
 // Value of being the side evaluated, helps with tempo
-pub const TEMPO: Score = 1 * SCORE_BASE;
+pub const TEMPO: Score = SCORE_BASE;
 
 pub fn piece(piece: Piece, scale: Score) -> Score {
     scale
