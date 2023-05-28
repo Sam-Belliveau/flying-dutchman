@@ -5,8 +5,9 @@ use chess::Board;
 use super::{markers::MarkerQueue, table_entry::TTableEntry};
 use nohash_hasher::NoHashHasher;
 
-const SLICE_SIZE: usize = 250000;
-const TABLE_SIZE: usize = 2500 * 1000 * 1000;
+const ELEMENT_SIZE: usize = size_of::<TTableEntry>() + size_of::<Board>() + size_of::<u64>();
+const SLICE_SIZE: usize = 50 * 1000 * 1000 / ELEMENT_SIZE;
+const TABLE_SIZE: usize = 1000 * 1000 * 1000;
 
 pub struct TTable {
     table: HashMap<Board, TTableEntry, BuildHasherDefault<NoHashHasher<u64>>>,
@@ -71,8 +72,7 @@ impl TTable {
     }
 
     fn size_to_bytes(size: usize) -> usize {
-        let element_size = size_of::<TTableEntry>() + size_of::<Board>() + size_of::<u64>();
-        size * element_size * 11 / 10
+        size * ELEMENT_SIZE * 11 / 10
     }
 
     pub fn memory_bytes(&self) -> usize {

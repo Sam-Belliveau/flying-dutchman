@@ -9,13 +9,13 @@ pub const POSSES: Score = SCORE_BASE;
 pub const ATTACK: Score = SCORE_BASE / 4;
 
 // Value of being able to move to a vacant square
-pub const HOLD: Score = SCORE_BASE / 10;
+pub const HOLD: Score = SCORE_BASE / 8;
 
 // Value of being able to move to a vacant square
-pub const NEAR_KING: Score = SCORE_BASE / 40;
+pub const NEAR_KING: Score = SCORE_BASE / 32;
 
 // Value of being the side evaluated, helps with tempo
-pub const TEMPO: Score = 0 * SCORE_BASE;
+pub const TEMPO: Score = 1 * SCORE_BASE;
 
 pub fn piece(piece: Piece, scale: Score) -> Score {
     scale

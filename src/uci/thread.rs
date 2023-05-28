@@ -1,7 +1,5 @@
 use std::{
-    sync::{
-        Arc, Mutex,
-    },
+    sync::{Arc, Mutex},
     thread,
 };
 
@@ -44,10 +42,14 @@ impl UCIThread {
             let deadline = Arc::clone(&self.deadline);
             thread::spawn(move || match engine.lock() {
                 Ok(mut engine) => {
-                    while engine
-                        .iterative_deepening_search(&board, &deadline)
-                        .is_some()
-                    {
+                    let mut presult = None;
+                    while let Some(result) = engine.iterative_deepening_search(&board, &deadline) {
+                        if presult == Some(result) {
+                            break;
+                        } else {
+                            presult = Some(result);
+                        }
+
                         let info = engine.min_search(&board);
                         print!(
                             "info depth {} seldepth {} multipv 1 score cp {} pv",
