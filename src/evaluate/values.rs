@@ -6,13 +6,13 @@ use super::{Score, SCORE_BASE};
 pub const POSSES: Score = SCORE_BASE;
 
 // Value of attacking an enemy piece
-pub const ATTACK: Score = SCORE_BASE / 4;
+pub const ATTACK: Score = SCORE_BASE / 3;
 
 // Value of being able to move to a vacant square
-pub const HOLD: Score = SCORE_BASE / 8;
+pub const HOLD: Score = SCORE_BASE / 9;
 
 // Value of being able to move to a vacant square
-pub const NEAR_KING: Score = SCORE_BASE / 32;
+pub const NEAR_KING: Score = SCORE_BASE / 36;
 
 // Value of being the side evaluated, helps with tempo
 pub const TEMPO: Score = 0;

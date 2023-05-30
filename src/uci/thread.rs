@@ -68,11 +68,9 @@ impl UCIThread {
                         );
 
                         let mut pv_board = board;
-                        while let Some(chess_move) =
-                            engine.opt_search(&pv_board).and_then(|f| f.best_move)
-                        {
-                            print!(" {}", chess_move);
-                            pv_board = pv_board.make_move_new(chess_move);
+                        while let Some((next_board, best_move)) = engine.get_pv_line(&pv_board) {
+                            print!(" {}", best_move);
+                            pv_board = next_board;
                         }
                         println!();
                         sync();

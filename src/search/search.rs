@@ -128,8 +128,8 @@ impl Searcher {
         return *self.table.get(board).unwrap();
     }
 
-    pub fn opt_search(&mut self, board: &Board) -> Option<&TTableEntry> {
-        self.table.get(board)
+    pub fn get_pv_line(&mut self, board: &Board) -> Option<(Board, ChessMove)> {
+        self.table.get_pv_line(board)
     }
 
     pub fn iterative_deepening_search(
@@ -139,7 +139,7 @@ impl Searcher {
     ) -> Option<Score> {
         let current = self.min_search(board);
 
-        self.table.refresh_pv(*board);
+        self.table.refresh_pv_line(*board);
         self.table.sweep();
 
         if current.is_edge() {
