@@ -73,7 +73,12 @@ impl Searcher {
                         deadline,
                     )?;
                     if let (true, Contained { .. }) = (depth > 1, window.probe(eval)) {
-                        eval.max(-self.alpha_beta_search(result, depth - 1, -window.raise_min(eval), deadline)?)
+                        eval.max(-self.alpha_beta_search(
+                            result,
+                            depth - 1,
+                            -window.raise_min(eval),
+                            deadline,
+                        )?)
                     } else {
                         eval
                     }

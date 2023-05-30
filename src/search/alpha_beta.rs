@@ -1,6 +1,6 @@
 use std::ops;
 
-use crate::evaluate::{Score, MAX_SCORE, MIN_SCORE};
+use crate::evaluate::{Score, MAX_SCORE, MIN_SCORE, MATE_CUTOFF, MATE_MOVE};
 
 #[derive(Clone, Copy, Debug)]
 pub struct AlphaBeta {
@@ -68,7 +68,11 @@ impl AlphaBeta {
     }
 
     pub fn alpha(&self) -> Score {
-        self.alpha
+        if self.alpha.abs() >= MATE_CUTOFF {
+            self.alpha - MATE_MOVE * self.alpha.signum()
+        } else {
+            self.alpha
+        }
     }
 }
 
