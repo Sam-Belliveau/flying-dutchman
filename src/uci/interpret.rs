@@ -1,6 +1,5 @@
 use std::{
-    fs::File,
-    io::{self, BufRead, Write},
+    io::{self, BufRead},
     str::FromStr,
 };
 
@@ -21,14 +20,9 @@ pub fn uci_loop() {
     let mut board = Board::default();
 
     let stdin = io::stdin();
-    let mut file =
-        File::create("/Users/samb/Programming/Hobby/Personal/flying-dutchman/log.txt").unwrap();
-
     loop {
         let line = stdin.lock().lines().next().unwrap().unwrap();
         let mut lexer = UCIToken::lexer(&line);
-        let _ = file.write_all(line.as_bytes());
-        let _ = file.write_all("\n".as_bytes());
 
         while let Some(token) = lexer.next() {
             match token {
