@@ -9,8 +9,9 @@ use super::{
 
 pub fn ab_qsearch(board: Board, mut window: AlphaBeta) -> Score {
     let movegen = if *board.checkers() == EMPTY {
-        if let Pruned { beta } = window.negamax(evaluate(&board)) {
-            return beta;
+        let eval = evaluate(&board);
+        if let Pruned { .. } = window.negamax(eval) {
+            return eval;
         }
 
         OrderedMoveGen::new_qsearch(&board)
@@ -22,8 +23,8 @@ pub fn ab_qsearch(board: Board, mut window: AlphaBeta) -> Score {
         let new_board = board.make_move_new(movement);
         let eval = -ab_qsearch(new_board, -window);
 
-        if let Pruned { beta } = window.negamax(eval) {
-            return beta;
+        if let Pruned { .. } = window.negamax(eval) {
+            return eval;
         }
     }
 

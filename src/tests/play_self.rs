@@ -23,7 +23,7 @@ fn print_result(title: &str, result: TTableEntry) {
 
 pub fn play_self() {
     let mut engine = Searcher::new();
-    engine.set_table_size(100000000000);
+    engine.set_table_size(2000000000);
 
     let mut board = Board::default();
 

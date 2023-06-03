@@ -1,18 +1,16 @@
 use std::ops;
 
-use crate::evaluate::{Score, MAX_SCORE, MIN_SCORE, MATE_CUTOFF, MATE_MOVE};
-
+use crate::evaluate::{Score, MATE_CUTOFF, MATE_MOVE, MAX_SCORE, MIN_SCORE};
 
 pub enum NegaMaxResult {
-    Worse { score: Score },
-    Equal { score: Score },
-    Best { score: Score },
+    Worse { delta: Score },
+    Best,
     Pruned { beta: Score },
 }
 
 pub enum ProbeResult {
     AlphaPrune { alpha: Score },
-    Contained { score: Score },
+    Contained,
     BetaPrune { beta: Score },
 }
 
@@ -36,11 +34,9 @@ impl AlphaBeta {
             NegaMaxResult::Pruned { beta: self.beta }
         } else if self.alpha < score {
             self.alpha = score;
-            NegaMaxResult::Best { score }
-        } else if self.alpha == score {
-            NegaMaxResult::Equal { score }
+            NegaMaxResult::Best
         } else {
-            NegaMaxResult::Worse { score }
+            NegaMaxResult::Worse { delta: self.alpha - score }
         }
     }
 
@@ -50,7 +46,7 @@ impl AlphaBeta {
         } else if score >= self.beta {
             ProbeResult::BetaPrune { beta: self.beta }
         } else {
-            ProbeResult::Contained { score }
+            ProbeResult::Contained
         }
     }
 

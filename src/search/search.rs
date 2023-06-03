@@ -60,11 +60,11 @@ impl Searcher {
             let eval = if best_move.is_some() {
                 let eval =
                     -self.ab_search(new_board, depth - 1, -window.null_window(), deadline)?;
-                if let (true, Contained { .. }) = (depth > 1, window.probe(eval)) {
+                if let Contained = window.probe(eval) {
                     eval.max(-self.ab_search(
                         new_board,
                         depth - 1,
-                        -window.raise_min(eval),
+                        -(window.raise_min(eval)),
                         deadline,
                     )?)
                 } else {
@@ -75,8 +75,8 @@ impl Searcher {
             };
 
             match window.negamax(eval) {
-                Worse { .. } | Equal { .. } => {}
-                Best { .. } => {
+                Worse { .. } => {}
+                Best => {
                     best_move = Some(movement);
                 }
                 Pruned { .. } => {
