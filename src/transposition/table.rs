@@ -1,13 +1,12 @@
 use std::{collections::HashMap, hash::BuildHasherDefault, mem::size_of};
 
-use chess::{Board, ChessMove};
+use chess::Board;
 
-use super::{markers::MarkerQueue, table_entry::TTableEntry};
+use super::{markers::MarkerQueue, pv_line::PVLine, table_entry::TTableEntry};
 use nohash_hasher::NoHashHasher;
 
-const ELEMENT_SIZE: usize = size_of::<TTableEntry>() + size_of::<Board>() + size_of::<u64>();
-const SLICE_SIZE: usize = 100 * 1000 * 1000 / ELEMENT_SIZE;
-const TABLE_SIZE: usize = 2000 * 1000 * 1000;
+const ELEMENT_SIZE: usize =
+    11 * (size_of::<TTableEntry>() + size_of::<Board>() + size_of::<u64>()) / 10;
 
 pub struct TTable {
     table: HashMap<Board, TTableEntry, BuildHasherDefault<NoHashHasher<u64>>>,
@@ -15,11 +14,15 @@ pub struct TTable {
 }
 
 impl TTable {
-    pub fn new() -> TTable {
+    pub fn new(table_size: usize) -> TTable {
         TTable {
             table: HashMap::with_hasher(BuildHasherDefault::default()),
-            queue: MarkerQueue::new(SLICE_SIZE),
+            queue: MarkerQueue::new(table_size / ELEMENT_SIZE),
         }
+    }
+
+    pub fn set_table_size(&mut self, table_size: usize) {
+        self.queue.set_table_size(table_size / ELEMENT_SIZE);
     }
 
     pub fn save(&mut self, board: &Board, result: TTableEntry) {
@@ -49,37 +52,27 @@ impl TTable {
         }
     }
 
-    pub fn get_pv_line(&mut self, board: &Board) -> Option<(Board, ChessMove)> {
-        if let Some(entry) = self.get(board).cloned() {
-            if let Some(best_move) = entry.best_move {
-                let next_board = board.make_move_new(best_move);
-
-                if let Some(next_entry) = self.get(&next_board) {
-                    if next_entry.depth < entry.depth {
-                        return Some((next_board, best_move));
-                    }
-                }
-            }
-        }
-
-        None
+    pub fn get_pv_line(&mut self, board: Board) -> PVLine {
+        PVLine::new(self, board)
     }
 
-    pub fn refresh_pv_line(&mut self, mut board: Board) {
-        while let Some((next_board, _)) = self.get_pv_line(&board) {
-            board = next_board;
-        }
+    pub fn refresh_pv_line(&mut self, board: Board) {
+        for _ in self.get_pv_line(board) {}
     }
 
     pub fn sweep(&mut self) {
-        if self.memory_bytes() > TABLE_SIZE {
-            let quota = self.memory_bytes() - TABLE_SIZE / 2;
+        debug_assert_eq!(self.table.len(), self.queue.total());
+
+        let table_len = self.table.len();
+        let max_len = self.queue.max_table_size();
+
+        if table_len > max_len {
+            let quota = table_len - max_len / 2;
+
             let mut amount = 0;
             let mut sweeper = 0;
 
-            while let (Some((marker, count)), true) =
-                (self.queue.pop(), Self::size_to_bytes(amount) < quota)
-            {
+            while let (Some((marker, count)), true) = (self.queue.pop(), amount < quota) {
                 amount += count;
                 sweeper = marker + 1;
             }
@@ -89,7 +82,7 @@ impl TTable {
     }
 
     fn size_to_bytes(size: usize) -> usize {
-        size * ELEMENT_SIZE * 11 / 10
+        size * ELEMENT_SIZE
     }
 
     pub fn memory_bytes(&self) -> usize {

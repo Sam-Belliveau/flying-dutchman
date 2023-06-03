@@ -1,19 +1,25 @@
-pub mod evaluate;
-pub mod values;
+pub mod pesto;
+pub mod score;
 
-pub use evaluate::*;
+pub use self::score::*;
 
-pub type Score = i64;
+use chess::{Board, BoardStatus, Color};
 
-pub const MIN_SCORE: Score = Score::MIN / 2;
-pub const MAX_SCORE: Score = Score::MAX / 2;
+pub fn evaluate(board: &Board) -> Score {
+    match board.status() {
+        BoardStatus::Checkmate => -MATE,
+        BoardStatus::Stalemate => MATE,
+        BoardStatus::Ongoing => match board.side_to_move() {
+            Color::White => 0 + evaluate_for_white(board),
+            Color::Black => 0 - evaluate_for_white(board),
+        },
+    }
+}
 
-pub const MATE: Score = MAX_SCORE / 16;
-pub const MATE_MOVE: Score = SCORE_BASE;
-pub const MATE_CUTOFF: Score = MATE / 2;
+fn evaluate_for_white(board: &Board) -> Score {
+    let mut score = 0;
 
-pub const SCORE_BASE: Score = 2 * 3 * 4 * 5 * 6 * 7 * 8;
+    score += SCORE_BASE * pesto::evaluate(board);
 
-pub fn score_to_cp(score: Score) -> Score {
-    score / (100 * SCORE_BASE)
+    score
 }

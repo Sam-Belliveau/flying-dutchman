@@ -23,6 +23,7 @@ fn print_result(title: &str, result: TTableEntry) {
 
 pub fn play_self() {
     let mut engine = Searcher::new();
+    engine.set_table_size(100000000000);
 
     let mut board = Board::default();
 
@@ -40,15 +41,20 @@ pub fn play_self() {
             Color::Black => println!("Black to move:"),
         }
 
-        deadline = Deadline::timeout(Duration::from_millis(2000));
+        deadline = Deadline::timeout(Duration::from_millis(1000));
         print_result("Init   ", engine.min_search(&board));
+        let mut rep = 0;
         let mut presult = None;
         while let Some(result) = engine.iterative_deepening_search(&board, &deadline) {
             print_result("Iter   ", engine.min_search(&board));
 
             if presult == Some(result) {
-                break;
+                rep += 1;
+                if rep > 10 {
+                    break;
+                }
             } else {
+                rep = 0;
                 presult = Some(result);
             }
         }

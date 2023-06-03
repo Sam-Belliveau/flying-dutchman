@@ -7,6 +7,8 @@ use std::{
 use chess::{Board, ChessMove};
 use logos::Logos;
 
+use crate::tests;
+
 use super::{
     go_options::GoOptions,
     sync,
@@ -30,6 +32,9 @@ pub fn uci_loop() {
 
         while let Some(token) = lexer.next() {
             match token {
+                Ok(FlyingDutchmanTest) => {
+                    tests::play_self::play_self();
+                }
                 Ok(UCI) => {
                     // Respond to the UCI identification command.
                     println!("id name Flying Dutchman");

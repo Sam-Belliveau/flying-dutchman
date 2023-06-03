@@ -1,42 +1,29 @@
-use chess::{get_bishop_moves, get_knight_moves, get_rook_moves, Board, MoveGen, EMPTY};
+use chess::{Board, EMPTY};
 
 use crate::evaluate::{evaluate, Score};
 
-use super::alpha_beta::{AlphaBeta, NegaMaxResult::*};
+use super::{
+    alpha_beta::{AlphaBeta, NegaMaxResult::*},
+    movegen::OrderedMoveGen,
+};
 
-fn alpha_beta_search(board: Board, mut window: AlphaBeta) -> Score {
-    let eval = evaluate(&board);
+pub fn ab_qsearch(board: Board, mut window: AlphaBeta) -> Score {
+    let movegen = if *board.checkers() == EMPTY {
+        if let Pruned { beta } = window.negamax(evaluate(&board)) {
+            return beta;
+        }
 
-    if let BetaPrune { beta } = window.negamax(eval) {
-        return beta;
-    }
+        OrderedMoveGen::new_qsearch(&board)
+    } else {
+        OrderedMoveGen::new(&board, None)
+    };
 
-    let pieces = *board.combined();
-    let king = board.king_square(!board.side_to_move());
-    let checkers =
-        get_bishop_moves(king, pieces) | get_rook_moves(king, pieces) | get_knight_moves(king);
+    for movement in movegen {
+        let new_board = board.make_move_new(movement);
+        let eval = -ab_qsearch(new_board, -window);
 
-    let t1 = (true, *board.pieces(chess::Piece::Queen));
-    let t2 = (true, *board.pieces(chess::Piece::Rook));
-    let t3 = (true, *board.pieces(chess::Piece::Bishop));
-    let t4 = (true, *board.pieces(chess::Piece::Knight));
-    let t5 = (true, *board.pieces(chess::Piece::Pawn));
-    let t6 = (false, checkers);
-
-    let mut moves = MoveGen::new_legal(&board);
-    for (good, mask) in [t1, t2, t3, t4, t5, t6] {
-        moves.set_iterator_mask(mask);
-
-        for movement in &mut moves {
-            let new_board = board.make_move_new(movement);
-
-            if good || (*new_board.checkers() != EMPTY) {
-                let eval = -alpha_beta_search(new_board, -window);
-
-                if let BetaPrune { beta } = window.negamax(eval) {
-                    return beta;
-                }
-            }
+        if let Pruned { beta } = window.negamax(eval) {
+            return beta;
         }
     }
 
@@ -44,5 +31,5 @@ fn alpha_beta_search(board: Board, mut window: AlphaBeta) -> Score {
 }
 
 pub fn qsearch(board: Board) -> Score {
-    alpha_beta_search(board, AlphaBeta::new())
+    ab_qsearch(board, AlphaBeta::new())
 }

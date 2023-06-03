@@ -2,23 +2,24 @@ use std::ops;
 
 use crate::evaluate::{Score, MAX_SCORE, MIN_SCORE, MATE_CUTOFF, MATE_MOVE};
 
+
+pub enum NegaMaxResult {
+    Worse { score: Score },
+    Equal { score: Score },
+    Best { score: Score },
+    Pruned { beta: Score },
+}
+
+pub enum ProbeResult {
+    AlphaPrune { alpha: Score },
+    Contained { score: Score },
+    BetaPrune { beta: Score },
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct AlphaBeta {
     alpha: Score,
     beta: Score,
-}
-
-pub enum NegaMaxResult {
-    Worse { score: Score },
-    Matches { score: Score },
-    NewBest { score: Score },
-    BetaPrune { beta: Score },
-}
-
-pub enum ProbeResult {
-    Alpha { alpha: Score },
-    Contained { score: Score },
-    Beta { beta: Score },
 }
 
 impl AlphaBeta {
@@ -32,12 +33,12 @@ impl AlphaBeta {
     pub fn negamax(&mut self, score: Score) -> NegaMaxResult {
         if self.beta <= score {
             self.alpha = score;
-            NegaMaxResult::BetaPrune { beta: self.beta }
+            NegaMaxResult::Pruned { beta: self.beta }
         } else if self.alpha < score {
             self.alpha = score;
-            NegaMaxResult::NewBest { score }
+            NegaMaxResult::Best { score }
         } else if self.alpha == score {
-            NegaMaxResult::Matches { score }
+            NegaMaxResult::Equal { score }
         } else {
             NegaMaxResult::Worse { score }
         }
@@ -45,9 +46,9 @@ impl AlphaBeta {
 
     pub fn probe(&self, score: Score) -> ProbeResult {
         if score <= self.alpha {
-            ProbeResult::Alpha { alpha: self.alpha }
+            ProbeResult::AlphaPrune { alpha: self.alpha }
         } else if score >= self.beta {
-            ProbeResult::Beta { beta: self.beta }
+            ProbeResult::BetaPrune { beta: self.beta }
         } else {
             ProbeResult::Contained { score }
         }

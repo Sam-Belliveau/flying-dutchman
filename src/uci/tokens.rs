@@ -6,6 +6,9 @@ use logos::Logos;
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip r"[ \t\n\f]+")]
 pub enum UCIToken {
+    #[token("fd_test")]
+    FlyingDutchmanTest,
+
     #[token("uci")]
     UCI,
 

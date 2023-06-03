@@ -1,13 +1,17 @@
-use chess::{BitBoard, Board, ChessMove, MoveGen, Piece, EMPTY};
+use chess::{Board, ChessMove};
 
 use crate::evaluate::{Score, MATE_CUTOFF};
 use crate::search::qsearch::qsearch;
+use crate::transposition::pv_line::PVLine;
 use crate::transposition::table::TTable;
 use crate::transposition::table_entry::TTableEntry;
 
 use super::alpha_beta::{AlphaBeta, NegaMaxResult::*, ProbeResult::*};
 use super::deadline::Deadline;
+use super::movegen::OrderedMoveGen;
 use super::Depth;
+
+const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
 
 pub struct Searcher {
     table: TTable,
@@ -16,11 +20,15 @@ pub struct Searcher {
 impl Searcher {
     pub fn new() -> Searcher {
         Searcher {
-            table: TTable::new(),
+            table: TTable::new(DEFAULT_TABLE_SIZE),
         }
     }
 
-    fn alpha_beta_search(
+    pub fn set_table_size(&mut self, table_size: usize) {
+        self.table.set_table_size(table_size);
+    }
+
+    fn ab_search(
         &mut self,
         board: Board,
         depth: Depth,
@@ -45,66 +53,47 @@ impl Searcher {
             return None;
         }
 
-        let mut moves = MoveGen::new_legal(&board);
-        let mut bmove = None;
+        let mut best_move = None;
+        for movement in OrderedMoveGen::new(&board, entry.and_then(|f| f.best_move)) {
+            let new_board = board.make_move_new(movement);
 
-        let pv = entry.and_then(|f| f.best_move);
-        'search: for mask in [
-            pv.map_or(EMPTY, |f| BitBoard::from_square(f.get_dest())),
-            *board.pieces(Piece::Queen),
-            *board.pieces(Piece::Rook),
-            *board.pieces(Piece::Bishop),
-            *board.pieces(Piece::Knight),
-            *board.pieces(Piece::Pawn),
-            !EMPTY,
-        ] {
-            moves.set_iterator_mask(mask);
-
-            for movement in &mut moves {
-                let result = board.make_move_new(movement);
-
-                let eval = if bmove.is_none() {
-                    -self.alpha_beta_search(result, depth - 1, -window, deadline)?
-                } else {
-                    let eval = -self.alpha_beta_search(
-                        result,
+            let eval = if best_move.is_some() {
+                let eval =
+                    -self.ab_search(new_board, depth - 1, -window.null_window(), deadline)?;
+                if let (true, Contained { .. }) = (depth > 1, window.probe(eval)) {
+                    eval.max(-self.ab_search(
+                        new_board,
                         depth - 1,
-                        -window.null_window(),
+                        -window.raise_min(eval),
                         deadline,
-                    )?;
-                    if let (true, Contained { .. }) = (depth > 1, window.probe(eval)) {
-                        eval.max(-self.alpha_beta_search(
-                            result,
-                            depth - 1,
-                            -window.raise_min(eval),
-                            deadline,
-                        )?)
+                    )?)
+                } else {
+                    eval
+                }
+            } else {
+                -self.ab_search(new_board, depth - 1, -window, deadline)?
+            };
+
+            match window.negamax(eval) {
+                Worse { .. } | Equal { .. } => {}
+                Best { .. } => {
+                    best_move = Some(movement);
+                }
+                Pruned { .. } => {
+                    best_move = Some(movement);
+
+                    if eval >= MATE_CUTOFF {
+                        break;
                     } else {
-                        eval
-                    }
-                };
-
-                match window.negamax(eval) {
-                    Worse { .. } | Matches { .. } => {}
-                    NewBest { .. } => {
-                        bmove = Some(movement);
-                    }
-                    BetaPrune { .. } => {
-                        bmove = Some(movement);
-
-                        if eval >= MATE_CUTOFF {
-                            break 'search;
-                        } else {
-                            self.table
-                                .update(&board, TTableEntry::new(depth, eval, movement));
-                            return Some(eval);
-                        }
+                        self.table
+                            .update(&board, TTableEntry::new(depth, eval, movement));
+                        return Some(eval);
                     }
                 }
             }
         }
 
-        if let Some(best_move) = bmove {
+        if let Some(best_move) = best_move {
             self.table
                 .save(&board, TTableEntry::new(depth, window.alpha(), best_move));
         }
@@ -112,28 +101,20 @@ impl Searcher {
         Some(window.alpha())
     }
 
-    pub fn depth_deadline_search(
-        &mut self,
-        board: Board,
-        depth: Depth,
-        deadline: &Deadline,
-    ) -> Option<Score> {
-        self.alpha_beta_search(board, depth, AlphaBeta::new(), deadline)
-    }
-
     pub fn min_search(&mut self, board: &Board) -> TTableEntry {
         if let Some(result) = self.table.get(board) {
-            if result.depth > 0 {
+            if result.best_move.is_some() {
                 return *result;
             }
         }
 
-        self.alpha_beta_search(*board, 1, AlphaBeta::new(), &Deadline::none())
+        self.ab_search(*board, 1, AlphaBeta::new(), &Deadline::none())
             .expect("Expected Complete Search");
+
         return *self.table.get(board).unwrap();
     }
 
-    pub fn get_pv_line(&mut self, board: &Board) -> Option<(Board, ChessMove)> {
+    pub fn get_pv_line(&mut self, board: Board) -> PVLine {
         self.table.get_pv_line(board)
     }
 
@@ -150,7 +131,7 @@ impl Searcher {
         if current.is_edge() {
             None
         } else {
-            self.depth_deadline_search(*board, current.depth + 1, deadline)
+            self.ab_search(*board, current.depth + 1, AlphaBeta::new(), deadline)
         }
     }
 

@@ -58,10 +58,8 @@ impl UCIThread {
                             score_to_cp(info.score)
                         );
 
-                        let mut pv_board = board;
-                        while let Some((next_board, best_move)) = engine.get_pv_line(&pv_board) {
-                            print!(" {}", best_move);
-                            pv_board = next_board;
+                        for movement in engine.get_pv_line(board) {
+                            print!(" {}", movement);
                         }
                         println!();
                         sync();
@@ -82,7 +80,7 @@ impl UCIThread {
                 }
             }
             Err(_) => {
-                eprintln!("Engine lock failed")
+                panic!("Engine lock failed")
             }
         })
     }
