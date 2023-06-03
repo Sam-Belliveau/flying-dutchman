@@ -40,6 +40,9 @@ impl PieceSquareTable {
     }
 }
 
+/* piece/sq tables */
+/* values from Rofchade: http://www.talkchess.com/forum3/viewtopic.php?f=2&t=68311&start=19 */
+
 const PAWN_TABLE: PieceSquareTable = PieceSquareTable::new(
     [
         0, 0, 0, 0, 0, 0, 0, 0, // Rank 1 or 8

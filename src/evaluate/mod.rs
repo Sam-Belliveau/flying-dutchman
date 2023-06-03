@@ -1,10 +1,12 @@
 pub mod pesto;
 pub mod score;
+pub mod simpleval;
 
 pub use self::score::*;
 
 use chess::{Board, BoardStatus, Color};
 
+const SIMPLE_EVAL: bool = false;
 const TEMPO: Score = SCORE_BASE * 0;
 
 pub fn evaluate(board: &Board) -> Score {
@@ -21,7 +23,11 @@ pub fn evaluate(board: &Board) -> Score {
 fn evaluate_for_white(board: &Board) -> Score {
     let mut score = 0;
 
-    score += SCORE_BASE * pesto::evaluate(board);
+    if SIMPLE_EVAL {
+        score += simpleval::evaluate(board);
+    } else {
+        score += pesto::evaluate(board);
+    }
 
     score
 }

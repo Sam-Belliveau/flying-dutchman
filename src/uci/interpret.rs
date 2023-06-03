@@ -37,7 +37,7 @@ pub fn uci_loop() {
                 }
                 Ok(UCI) => {
                     // Respond to the UCI identification command.
-                    println!("id name Flying Dutchman");
+                    println!("id name Flying-Dutchman");
                     println!("id author Sam Belliveau");
                     println!("uciok");
                 }

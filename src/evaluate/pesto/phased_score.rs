@@ -1,6 +1,6 @@
 use chess::{Color, Piece};
 
-use crate::evaluate::Score;
+use crate::evaluate::{Score, SCORE_BASE};
 
 use super::gamephase::GamePhase;
 
@@ -58,8 +58,8 @@ impl PhasedScore {
         RawPhasedScore::from_piece(piece).colorize(color)
     }
 
-    pub fn weight(self, phase: GamePhase) -> Score {
-        phase.weight(self.mid_game, self.end_game)
+    pub fn collapse(self, phase: GamePhase) -> Score {
+        phase.weight(SCORE_BASE * self.mid_game, SCORE_BASE * self.end_game)
     }
 }
 

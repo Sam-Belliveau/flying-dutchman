@@ -25,5 +25,5 @@ pub fn evaluate(board: &Board) -> Score {
         }
     }
 
-    score.weight(gamephase)
+    score.collapse(gamephase)
 }
