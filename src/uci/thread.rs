@@ -6,7 +6,7 @@ use std::{
 use chess::Board;
 
 use crate::{
-    evaluate::score_to_cp,
+    evaluate::score_to_str,
     search::{deadline::Deadline, search::Searcher},
     uci::sync,
 };
@@ -52,10 +52,10 @@ impl UCIThread {
                     if print_result {
                         let info = engine.min_search(&board);
                         print!(
-                            "info depth {} seldepth {} multipv 1 score cp {} pv",
+                            "info depth {} seldepth {} multipv 1 score {} pv",
                             info.depth,
                             info.depth,
-                            score_to_cp(info.score)
+                            score_to_str(info.score)
                         );
 
                         for movement in engine.get_pv_line(board) {
@@ -69,12 +69,28 @@ impl UCIThread {
                 if print_result {
                     if let Some(best_move) = engine.best_move(&board) {
                         let info = engine.min_search(&board);
+                        print!(
+                            "info depth {} seldepth {} multipv 1 score {} pv",
+                            info.depth,
+                            info.depth,
+                            score_to_str(info.score)
+                        );
+
+                        for movement in engine.get_pv_line(board) {
+                            print!(" {}", movement);
+                        }
+                        println!();
+
                         println!(
-                            "bestmove {} info depth {} score cp {}",
+                            "bestmove {} info depth {} score {}",
                             best_move,
                             info.depth,
-                            score_to_cp(info.score)
+                            score_to_str(info.score)
                         );
+
+                        sync();
+                    } else {
+                        println!("bestmove (none)");
                         sync();
                     }
                 }

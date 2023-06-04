@@ -28,7 +28,11 @@ impl TTableEntry {
     pub fn leaf(score: Score) -> TTableEntry {
         TTableEntry {
             score,
-            depth: 0,
+            depth: if score.abs() >= MATE_CUTOFF {
+                Depth::MAX / 2
+            } else {
+                0
+            },
             best_move: None,
             marker: 0,
         }

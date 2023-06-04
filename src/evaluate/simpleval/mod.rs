@@ -1,4 +1,4 @@
-use chess::{Piece, Board, Color, get_king_moves, MoveGen, BitBoard, EMPTY};
+use chess::{get_king_moves, BitBoard, Board, Color, MoveGen, Piece, EMPTY};
 
 use super::{Score, SCORE_BASE};
 
@@ -6,13 +6,13 @@ use super::{Score, SCORE_BASE};
 const POSSES: Score = SCORE_BASE;
 
 // Value of attacking an enemy piece
-const ATTACK: Score = SCORE_BASE / 4;
+const ATTACK: Score = SCORE_BASE / 3;
 
 // Value of being able to move to a vacant square
-const HOLD: Score = SCORE_BASE / 10;
+const HOLD: Score = SCORE_BASE / 9;
 
 // Value of being able to move to a vacant square
-const NEAR_KING: Score = SCORE_BASE / 40;
+const NEAR_KING: Score = SCORE_BASE / 27;
 
 fn piece_value(piece: Piece, scale: Score) -> Score {
     scale

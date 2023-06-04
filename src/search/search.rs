@@ -11,7 +11,7 @@ use super::deadline::Deadline;
 use super::movegen::OrderedMoveGen;
 use super::Depth;
 
-const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
+const DEFAULT_TABLE_SIZE: usize = 3000 * 1000 * 1000;
 
 pub struct Searcher {
     table: TTable,
@@ -96,6 +96,8 @@ impl Searcher {
         if let Some(best_move) = best_move {
             self.table
                 .save(&board, TTableEntry::new(depth, window.alpha(), best_move));
+        } else {
+            self.table.save(&board, TTableEntry::leaf(window.alpha()));
         }
 
         Some(window.alpha())
@@ -103,7 +105,7 @@ impl Searcher {
 
     pub fn min_search(&mut self, board: &Board) -> TTableEntry {
         if let Some(result) = self.table.get(board) {
-            if result.best_move.is_some() {
+            if result.best_move.is_some() || result.is_edge() {
                 return *result;
             }
         }
