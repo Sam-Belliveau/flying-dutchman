@@ -19,10 +19,6 @@ impl PieceSquareTable {
         Self { mg, eg }
     }
 
-    const fn from_index(&self, idx: usize) -> RawPhasedScore {
-        RawPhasedScore::new(self.mg[idx], self.eg[idx])
-    }
-
     pub const fn from_piece(piece: Piece) -> &'static PieceSquareTable {
         match piece {
             Pawn => &PAWN_TABLE,
@@ -34,13 +30,14 @@ impl PieceSquareTable {
         }
     }
 
-    pub fn from_square(&self, square: Square, color: Color) -> PhasedScore {
+    pub fn get_square(&self, square: Square, color: Color) -> PhasedScore {
         let index = match color {
             Color::White => 0b111000 ^ square.to_index(),
-            Color::Black => 0b000000 ^ square.to_index(),
+            Color::Black => square.to_index(),
         };
 
-        self.from_index(index).colorize(color)
+
+        RawPhasedScore::new(self.mg[index], self.eg[index]).colorize(color)
     }
 
     pub const TABLES: [(Piece, &'static PieceSquareTable); 6] = [

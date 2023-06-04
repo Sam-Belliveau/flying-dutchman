@@ -10,7 +10,7 @@ pub enum UCIToken {
     FlyingDutchmanTest,
 
     #[token("uci")]
-    UCI,
+    Uci,
 
     #[token("ucinewgame")]
     NewGame,

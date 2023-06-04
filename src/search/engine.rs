@@ -131,9 +131,7 @@ impl Engine {
         self.table.refresh_pv_line(*board);
         self.table.sweep();
 
-        let score = self.ab_search(*board, previous.depth + 1, AlphaBeta::new(), deadline);
-
-        score
+        self.ab_search(*board, previous.depth + 1, AlphaBeta::new(), deadline)
     }
 
     pub fn best_move(&mut self, board: &Board) -> Option<ChessMove> {

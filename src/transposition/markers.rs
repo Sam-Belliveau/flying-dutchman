@@ -55,7 +55,7 @@ impl MarkerQueue {
             }
         }
 
-        return false;
+        false
     }
 
     pub fn pop(&mut self) -> Option<(Marker, usize)> {

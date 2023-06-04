@@ -15,12 +15,12 @@ pub fn evaluate(board: &Board) -> Score {
     for (piece, table) in PieceSquareTable::TABLES {
         for square in board.color_combined(White) & board.pieces(piece) {
             score += PhasedScore::from_piece(piece, White);
-            score += table.from_square(square, White);
+            score += table.get_square(square, White);
         }
 
         for square in board.color_combined(Black) & board.pieces(piece) {
             score += PhasedScore::from_piece(piece, Black);
-            score += table.from_square(square, Black);
+            score += table.get_square(square, Black);
         }
     }
 

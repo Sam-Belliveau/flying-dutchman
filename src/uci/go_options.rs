@@ -81,10 +81,10 @@ impl GoOptions {
         }
     }
 
-    pub fn to_deadline(&self, board: &Board) -> Deadline {
+    pub fn to_deadline(self, board: &Board) -> Deadline {
         match self {
             GoOptions::Infinite => Deadline::none(),
-            GoOptions::MoveTime(time) => Deadline::timeout(*time),
+            GoOptions::MoveTime(time) => Deadline::timeout(time),
             GoOptions::TimeLimit {
                 white_time,
                 black_time,
@@ -100,10 +100,10 @@ impl GoOptions {
 
                 match side {
                     chess::Color::White => Deadline::timeout(
-                        *white_time.max(&Duration::from_secs(0)) / moves_left + *white_inc - BUFFER,
+                        white_time.max(Duration::from_secs(0)) / moves_left + white_inc - BUFFER,
                     ),
                     chess::Color::Black => Deadline::timeout(
-                        *black_time.max(&Duration::from_secs(0)) / moves_left + *black_inc - BUFFER,
+                        black_time.max(Duration::from_secs(0)) / moves_left + black_inc - BUFFER,
                     ),
                 }
             }

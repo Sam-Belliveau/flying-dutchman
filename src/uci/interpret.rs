@@ -29,7 +29,7 @@ pub fn uci_loop() {
                 Ok(FlyingDutchmanTest) => {
                     tests::play_self::play_self();
                 }
-                Ok(UCI) => {
+                Ok(Uci) => {
                     // Respond to the UCI identification command.
                     println!("id name Flying-Dutchman");
                     println!("id author Sam Belliveau");
