@@ -5,13 +5,13 @@ use crate::evaluate::pesto::{phased_score::PhasedScore, gamephase::GamePhase};
 use super::{Score, SCORE_BASE, pesto};
 
 // Value of attacking an enemy piece
-const ATTACK: Score = SCORE_BASE / 5;
+const ATTACK: Score = SCORE_BASE / 3;
+
+// Value of attacking an enemy piece near a square
+const NEAR_KING: Score = SCORE_BASE / 9;
 
 // Value of being able to move to a vacant square
-const HOLD: Score = SCORE_BASE / 10;
-
-// Value of being able to move to a vacant square
-const NEAR_KING: Score = SCORE_BASE / 40;
+const HOLD: Score = SCORE_BASE / 27;
 
 pub fn evaluate(board: &Board) -> Score {
     let mut score = 0;
