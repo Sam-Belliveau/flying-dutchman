@@ -27,8 +27,9 @@ impl GamePhase {
         }
     }
 
-    pub fn weight(&self, mid_game: Score, end_game: Score) -> Score {
-        let numerator = mid_game * self.mid_weight + end_game * self.end_weight;
-        numerator / (self.mid_weight + self.end_weight)
+    pub const fn weight(&self, mid_game: Score, end_game: Score) -> Score {
+        let mid_score = mid_game * self.mid_weight;
+        let end_score = end_game * self.end_weight;
+        (mid_score + end_score) / (self.mid_weight + self.end_weight)
     }
 }

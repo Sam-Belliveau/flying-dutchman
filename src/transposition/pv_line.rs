@@ -2,16 +2,16 @@ use std::collections::HashSet;
 
 use chess::{Board, ChessMove};
 
-use super::table::TTable;
+use super::table::{TTableHashMap};
 
 pub struct PVLine<'a> {
-    table: &'a mut TTable,
+    table: &'a TTableHashMap,
     passed: HashSet<ChessMove>,
     board: Board,
 }
 
 impl<'a> PVLine<'a> {
-    pub fn new(table: &'a mut TTable, board: Board) -> PVLine<'a> {
+    pub fn new(table: &'a TTableHashMap, board: Board) -> PVLine<'a> {
         PVLine {
             table,
             passed: HashSet::new(),

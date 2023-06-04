@@ -7,7 +7,7 @@ use crate::{
 
 use super::markers::Marker;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug)]
 pub struct TTableEntry {
     pub depth: Depth,
     pub score: Score,
@@ -38,7 +38,7 @@ impl TTableEntry {
         self.score.abs() >= MATE_CUTOFF && self.depth < 1
     }
 
-    pub fn update(&mut self, result: TTableEntry) {
+    pub fn update(&mut self, result: &TTableEntry) {
         if self.depth <= result.depth {
             self.depth = result.depth;
             self.score = result.score;

@@ -6,7 +6,7 @@ pub struct OrderedMoveGen {
     move_gen: MoveGen,
 }
 
-impl<'a> OrderedMoveGen {
+impl OrderedMoveGen {
     fn initialize(mut self) -> Self {
         if let Some(pv) = self.pv {
             assert!(self.move_gen.remove_move(pv));
@@ -17,7 +17,7 @@ impl<'a> OrderedMoveGen {
         self
     }
 
-    pub fn new(board: &Board, pv: Option<ChessMove>) -> OrderedMoveGen {
+    pub fn full_search(board: &Board, pv: Option<ChessMove>) -> OrderedMoveGen {
         OrderedMoveGen {
             pv,
             masks: [
@@ -34,7 +34,7 @@ impl<'a> OrderedMoveGen {
         .initialize()
     }
 
-    pub fn new_qsearch(board: &Board) -> OrderedMoveGen {
+    pub fn quiescence_search(board: &Board) -> OrderedMoveGen {
         OrderedMoveGen {
             pv: None,
             masks: [

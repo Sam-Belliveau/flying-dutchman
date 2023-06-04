@@ -1,3 +1,5 @@
+// score.rs
+
 pub type Score = i64;
 
 pub const MATE: Score = Score::MAX / 2;

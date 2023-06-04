@@ -5,7 +5,7 @@ use super::table_entry::TTableEntry;
 pub type Marker = u64;
 const MARKER_START: Marker = Marker::MAX / 4;
 
-const TABLE_CHUNKS: usize = 64;
+const TABLE_CHUNKS: usize = 128;
 
 #[derive(Debug)]
 pub struct MarkerQueue {
@@ -33,8 +33,8 @@ impl MarkerQueue {
         }
     }
 
-    pub fn count(&mut self, entry: &mut TTableEntry) {
-        if self.head != entry.marker {
+    pub fn count(&mut self, entry: &mut TTableEntry) -> bool {
+        if entry.marker < self.head {
             if let Some(count) = self.get(entry.marker) {
                 *count -= 1;
             }
@@ -47,10 +47,15 @@ impl MarkerQueue {
 
                 if slice_size < *count {
                     self.head += 1;
-                    self.queue.push_back(0)
+                    self.queue.push_back(0);
+                    return true;
                 }
+            } else {
+                panic!("It is not possible for the head to not be in the queue");
             }
         }
+
+        return false;
     }
 
     pub fn pop(&mut self) -> Option<(Marker, usize)> {

@@ -1,6 +1,6 @@
 use std::ops;
 
-use crate::evaluate::{Score, MATE_CUTOFF, MATE_MOVE, MATE};
+use crate::evaluate::{Score, MATE, MATE_CUTOFF, MATE_MOVE};
 
 pub enum NegaMaxResult {
     Worse { delta: Score },
@@ -36,7 +36,9 @@ impl AlphaBeta {
             self.alpha = score;
             NegaMaxResult::Best
         } else {
-            NegaMaxResult::Worse { delta: self.alpha - score }
+            NegaMaxResult::Worse {
+                delta: self.alpha - score,
+            }
         }
     }
 
@@ -65,8 +67,13 @@ impl AlphaBeta {
     }
 
     pub fn alpha(&self) -> Score {
-        if self.alpha.abs() >= MATE_CUTOFF {
-            self.alpha - MATE_MOVE * self.alpha.signum()
+        // This is how we keep track of how many moves we are from mate.
+        // Every time we call this function, we take a bit from the score,
+        // to indicate that it takes an extra move to get here.
+        if self.alpha >= MATE_CUTOFF {
+            self.alpha - MATE_MOVE
+        } else if self.alpha <= -MATE_CUTOFF {
+            self.alpha + MATE_MOVE
         } else {
             self.alpha
         }

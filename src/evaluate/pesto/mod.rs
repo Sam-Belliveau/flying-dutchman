@@ -2,7 +2,7 @@ pub mod gamephase;
 pub mod phased_score;
 pub mod psq_table;
 
-use chess::{Board, Color, Piece::*};
+use chess::{Board, Color::{White, Black}};
 
 use self::{gamephase::GamePhase, phased_score::PhasedScore, psq_table::PieceSquareTable};
 
@@ -12,16 +12,15 @@ pub fn evaluate(board: &Board) -> Score {
     let gamephase = GamePhase::new(board);
     let mut score = PhasedScore::new();
 
-    for piece in &[Pawn, Knight, Bishop, Rook, Queen, King] {
-        let table = PieceSquareTable::from_piece(*piece);
+    for (piece, table) in PieceSquareTable::TABLES {
+        for square in board.color_combined(White) & board.pieces(piece) {
+            score += PhasedScore::from_piece(piece, White);
+            score += table.from_square(square, White);
+        }
 
-        for color in &[Color::White, Color::Black] {
-            let mask = board.color_combined(*color);
-
-            for square in mask & board.pieces(*piece) {
-                score += PhasedScore::from_piece(*piece, *color);
-                score += table.from_square(square, *color);
-            }
+        for square in board.color_combined(Black) & board.pieces(piece) {
+            score += PhasedScore::from_piece(piece, Black);
+            score += table.from_square(square, Black);
         }
     }
 

@@ -4,7 +4,7 @@ use chess::{Board, Color};
 
 use crate::{
     evaluate::score_to_cp,
-    search::{deadline::Deadline, search::Searcher},
+    search::{deadline::Deadline, engine::Engine},
     transposition::table_entry::TTableEntry,
 };
 
@@ -22,8 +22,8 @@ fn print_result(title: &str, result: TTableEntry) {
 }
 
 pub fn play_self() {
-    let mut engine = Searcher::new();
-    engine.set_table_size(2000000000);
+    let mut engine = Engine::new();
+    engine.table.set_table_size(2000000000);
 
     let mut board = Board::default();
 

@@ -1,6 +1,6 @@
 use chess::{Board, EMPTY};
 
-use crate::evaluate::{evaluate, Score};
+use crate::evaluate::{Score, evaluate};
 
 use super::{
     alpha_beta::{AlphaBeta, NegaMaxResult::*},
@@ -8,23 +8,25 @@ use super::{
 };
 
 pub fn ab_qsearch(board: Board, mut window: AlphaBeta) -> Score {
-    let movegen = if *board.checkers() == EMPTY {
-        let eval = evaluate(&board);
-        if let Pruned { .. } = window.negamax(eval) {
-            return eval;
-        }
+    let movegen = {
+        if *board.checkers() == EMPTY {
+            let score = evaluate(&board);
+            if let Pruned { .. } = window.negamax(score) {
+                return score;
+            }
 
-        OrderedMoveGen::new_qsearch(&board)
-    } else {
-        OrderedMoveGen::new(&board, None)
+            OrderedMoveGen::quiescence_search(&board)
+        } else {
+            OrderedMoveGen::full_search(&board, None)
+        }
     };
 
     for movement in movegen {
         let new_board = board.make_move_new(movement);
-        let eval = -ab_qsearch(new_board, -window);
+        let score = -ab_qsearch(new_board, -window);
 
-        if let Pruned { .. } = window.negamax(eval) {
-            return eval;
+        if let Pruned { .. } = window.negamax(score) {
+            return score;
         }
     }
 

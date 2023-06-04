@@ -11,11 +11,11 @@ pub struct RawPhasedScore {
 }
 
 impl RawPhasedScore {
-    pub fn new(mid_game: Score, end_game: Score) -> RawPhasedScore {
+    pub const fn new(mid_game: Score, end_game: Score) -> RawPhasedScore {
         Self { mid_game, end_game }
     }
 
-    pub fn from_piece(piece: Piece) -> RawPhasedScore {
+    pub const fn from_piece(piece: Piece) -> RawPhasedScore {
         match piece {
             Piece::Pawn => Self::new(82, 94),
             Piece::Knight => Self::new(337, 281),
@@ -26,7 +26,7 @@ impl RawPhasedScore {
         }
     }
 
-    pub fn colorize(self, color: Color) -> PhasedScore {
+    pub const fn colorize(self, color: Color) -> PhasedScore {
         match color {
             Color::White => PhasedScore {
                 mid_game: self.mid_game,
@@ -47,18 +47,18 @@ pub struct PhasedScore {
 }
 
 impl PhasedScore {
-    pub fn new() -> PhasedScore {
+    pub const fn new() -> PhasedScore {
         Self {
             mid_game: 0,
             end_game: 0,
         }
     }
 
-    pub fn from_piece(piece: Piece, color: Color) -> PhasedScore {
+    pub const fn from_piece(piece: Piece, color: Color) -> PhasedScore {
         RawPhasedScore::from_piece(piece).colorize(color)
     }
 
-    pub fn collapse(self, phase: GamePhase) -> Score {
+    pub const fn collapse(self, phase: GamePhase) -> Score {
         phase.weight(self.mid_game, self.end_game)
     }
 }

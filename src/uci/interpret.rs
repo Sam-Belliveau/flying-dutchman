@@ -10,7 +10,7 @@ use crate::tests;
 
 use super::{
     go_options::GoOptions,
-    sync,
+    stdout_sync,
     thread::UCIThread,
     tokens::UCIToken::{self, *},
 };
@@ -92,6 +92,6 @@ pub fn uci_loop() {
             }
         }
 
-        sync();
+        stdout_sync();
     }
 }

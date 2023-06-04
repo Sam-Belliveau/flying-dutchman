@@ -6,10 +6,12 @@ use super::{markers::MarkerQueue, pv_line::PVLine, table_entry::TTableEntry};
 use nohash_hasher::NoHashHasher;
 
 const ELEMENT_SIZE: usize =
-    11 * (size_of::<TTableEntry>() + size_of::<Board>() + size_of::<u64>()) / 10;
+    3 * (size_of::<TTableEntry>() + size_of::<Board>() + size_of::<u64>()) / 2;
+
+pub type TTableHashMap = HashMap<Board, TTableEntry, BuildHasherDefault<NoHashHasher<u64>>>;
 
 pub struct TTable {
-    table: HashMap<Board, TTableEntry, BuildHasherDefault<NoHashHasher<u64>>>,
+    table: TTableHashMap,
     queue: MarkerQueue,
 }
 
@@ -29,7 +31,7 @@ impl TTable {
         self.queue.count(
             self.table
                 .entry(*board)
-                .and_modify(|e| e.update(result))
+                .and_modify(|e| e.update(&result))
                 .or_insert(result),
         );
     }
@@ -53,7 +55,7 @@ impl TTable {
     }
 
     pub fn get_pv_line(&mut self, board: Board) -> PVLine {
-        PVLine::new(self, board)
+        PVLine::new(&self.table, board)
     }
 
     pub fn refresh_pv_line(&mut self, board: Board) {
@@ -83,6 +85,10 @@ impl TTable {
 
     fn size_to_bytes(size: usize) -> usize {
         size * ELEMENT_SIZE
+    }
+
+    pub fn hashfull_permille(&self) -> usize {
+        self.table.len() * 1000 / self.queue.max_table_size()
     }
 
     pub fn memory_bytes(&self) -> usize {

@@ -1,4 +1,8 @@
-use chess::{Color, Square, Piece};
+use chess::{
+    Color,
+    Piece::{self, *},
+    Square,
+};
 
 use crate::evaluate::Score;
 
@@ -15,18 +19,18 @@ impl PieceSquareTable {
         Self { mg, eg }
     }
 
-    fn from_index(&self, idx: usize) -> RawPhasedScore {
+    const fn from_index(&self, idx: usize) -> RawPhasedScore {
         RawPhasedScore::new(self.mg[idx], self.eg[idx])
     }
 
-    pub fn from_piece(piece: Piece) -> &'static PieceSquareTable {
+    pub const fn from_piece(piece: Piece) -> &'static PieceSquareTable {
         match piece {
-            Piece::Pawn => &PAWN_TABLE,
-            Piece::Knight => &KNIGHT_TABLE,
-            Piece::Bishop => &BISHOP_TABLE,
-            Piece::Rook => &ROOK_TABLE,
-            Piece::Queen => &QUEEN_TABLE,
-            Piece::King => &KING_TABLE,
+            Pawn => &PAWN_TABLE,
+            Knight => &KNIGHT_TABLE,
+            Bishop => &BISHOP_TABLE,
+            Rook => &ROOK_TABLE,
+            Queen => &QUEEN_TABLE,
+            King => &KING_TABLE,
         }
     }
 
@@ -38,6 +42,15 @@ impl PieceSquareTable {
 
         self.from_index(index).colorize(color)
     }
+
+    pub const TABLES: [(Piece, &'static PieceSquareTable); 6] = [
+        (Pawn, Self::from_piece(Pawn)),
+        (Knight, Self::from_piece(Knight)),
+        (Bishop, Self::from_piece(Bishop)),
+        (Rook, Self::from_piece(Rook)),
+        (Queen, Self::from_piece(Queen)),
+        (King, Self::from_piece(King)),
+    ];
 }
 
 /* piece/sq tables */
