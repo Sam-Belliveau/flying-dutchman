@@ -8,7 +8,7 @@ use crate::{
     uci::tokens::UCIGoToken::{self, *},
 };
 
-const BUFFER: Duration = Duration::from_millis(100);
+const BUFFER: Duration = Duration::from_millis(250);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum GoOptions {
@@ -98,14 +98,14 @@ impl GoOptions {
                     + 2 * board.pieces(Piece::Rook).popcnt()
                     + 4 * board.pieces(Piece::Queen).popcnt();
 
-                match side {
-                    chess::Color::White => Deadline::timeout(
-                        white_time.max(Duration::from_secs(0)) / moves_left + white_inc - BUFFER,
-                    ),
-                    chess::Color::Black => Deadline::timeout(
-                        black_time.max(Duration::from_secs(0)) / moves_left + black_inc - BUFFER,
-                    ),
-                }
+                let (time, inc) = match side {
+                    chess::Color::White => (white_time, white_inc),
+                    chess::Color::Black => (black_time, black_inc),
+                };
+
+                let maxtime = time - BUFFER;
+                let movetime = time / moves_left + inc - BUFFER;
+                Deadline::timeout(movetime.min(maxtime))
             }
         }
     }
