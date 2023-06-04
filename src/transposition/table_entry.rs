@@ -35,7 +35,7 @@ impl TTableEntry {
     }
 
     pub fn is_edge(&self) -> bool {
-        self.score.abs() >= MATE_CUTOFF
+        self.score.abs() >= MATE_CUTOFF && self.depth < 1
     }
 
     pub fn update(&mut self, result: TTableEntry) {

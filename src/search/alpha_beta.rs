@@ -1,6 +1,6 @@
 use std::ops;
 
-use crate::evaluate::{Score, MATE_CUTOFF, MATE_MOVE, MAX_SCORE, MIN_SCORE};
+use crate::evaluate::{Score, MATE_CUTOFF, MATE_MOVE, MATE};
 
 pub enum NegaMaxResult {
     Worse { delta: Score },
@@ -23,8 +23,8 @@ pub struct AlphaBeta {
 impl AlphaBeta {
     pub fn new() -> Self {
         Self {
-            alpha: MIN_SCORE,
-            beta: MAX_SCORE,
+            alpha: -MATE,
+            beta: MATE,
         }
     }
 

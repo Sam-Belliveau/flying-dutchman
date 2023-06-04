@@ -55,28 +55,26 @@ fn evaluate_pieces(board: &Board) -> Score {
 }
 
 fn evaluate_moves(board: &Board) -> Score {
-    fn evaluate_moves_side(board: Option<&Board>) -> Score {
+    fn evaluate_moves_side(board: &Board) -> Score {
         let mut score = 0;
 
-        if let Some(moves) = board {
-            let king_area = get_king_moves(moves.king_square(!moves.side_to_move()));
-            for movement in MoveGen::new_legal(moves) {
-                let dest = movement.get_dest();
-                let near_king = (king_area & BitBoard::from_square(dest)) != EMPTY;
+        let king_area = get_king_moves(board.king_square(!board.side_to_move()));
+        for movement in MoveGen::new_legal(board) {
+            let dest = movement.get_dest();
+            let near_king = (king_area & BitBoard::from_square(dest)) != EMPTY;
 
-                match moves.piece_on(dest) {
-                    Some(piece) => {
-                        score += piece_value(piece, ATTACK);
-                        if near_king {
-                            score += piece_value(piece, NEAR_KING);
-                        }
+            match board.piece_on(dest) {
+                Some(piece) => {
+                    score += piece_value(piece, ATTACK);
+                    if near_king {
+                        score += piece_value(piece, NEAR_KING);
                     }
+                }
 
-                    None => {
-                        score += piece_value(Piece::Pawn, HOLD);
-                        if near_king {
-                            score += piece_value(Piece::Pawn, NEAR_KING);
-                        }
+                None => {
+                    score += piece_value(Piece::Pawn, HOLD);
+                    if near_king {
+                        score += piece_value(Piece::Pawn, NEAR_KING);
                     }
                 }
             }
@@ -85,14 +83,19 @@ fn evaluate_moves(board: &Board) -> Score {
         score
     }
 
-    let null_move = board.null_move();
-    let (white_board, black_board) = match board.side_to_move() {
-        Color::White => (Some(board), null_move.as_ref()),
-        Color::Black => (null_move.as_ref(), Some(board)),
-    };
+    if let Some(null_move) = board.null_move() {
+        let (white_board, black_board) = match board.side_to_move() {
+            Color::White => (board, &null_move),
+            Color::Black => (&null_move, board),
+        };
 
-    let white_score = evaluate_moves_side(white_board);
-    let black_score = evaluate_moves_side(black_board);
+        let white_score = evaluate_moves_side(white_board);
+        let black_score = evaluate_moves_side(black_board);
 
-    white_score - black_score
+        white_score - black_score
+    } else {
+        // This is typically unreachable due to QSearch
+        // not running standpat on moves with check.
+        0
+    }
 }
