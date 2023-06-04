@@ -1,6 +1,6 @@
 use chess::{Color, Piece};
 
-use crate::evaluate::{Score, SCORE_BASE};
+use crate::evaluate::Score;
 
 use super::gamephase::GamePhase;
 
@@ -59,7 +59,7 @@ impl PhasedScore {
     }
 
     pub fn collapse(self, phase: GamePhase) -> Score {
-        phase.weight(SCORE_BASE * self.mid_game, SCORE_BASE * self.end_game)
+        phase.weight(self.mid_game, self.end_game)
     }
 }
 
@@ -67,5 +67,16 @@ impl std::ops::AddAssign for PhasedScore {
     fn add_assign(&mut self, rhs: Self) {
         self.mid_game += rhs.mid_game;
         self.end_game += rhs.end_game;
+    }
+}
+
+impl std::ops::Mul<Score> for PhasedScore {
+    type Output= PhasedScore;
+
+    fn mul(self, rhs: Score) -> Self::Output {
+        PhasedScore {
+            mid_game: self.mid_game * rhs,
+            end_game: self.end_game * rhs,
+        }
     }
 }

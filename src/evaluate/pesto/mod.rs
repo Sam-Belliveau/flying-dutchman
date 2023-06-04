@@ -1,12 +1,12 @@
+pub mod gamephase;
+pub mod phased_score;
+pub mod psq_table;
+
 use chess::{Board, Color, Piece::*};
 
 use self::{gamephase::GamePhase, phased_score::PhasedScore, psq_table::PieceSquareTable};
 
-use super::Score;
-
-pub mod gamephase;
-pub mod phased_score;
-pub mod psq_table;
+use super::{Score, SCORE_BASE};
 
 pub fn evaluate(board: &Board) -> Score {
     let gamephase = GamePhase::new(board);
@@ -25,5 +25,5 @@ pub fn evaluate(board: &Board) -> Score {
         }
     }
 
-    score.collapse(gamephase)
+    (score * SCORE_BASE).collapse(gamephase)
 }

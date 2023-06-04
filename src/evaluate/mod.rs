@@ -1,12 +1,12 @@
 pub mod pesto;
 pub mod score;
-pub mod simpleval;
+pub mod crazyval;
 
 pub use self::score::*;
 
 use chess::{Board, BoardStatus, Color};
 
-const SIMPLE_EVAL: bool = false;
+const CRAZY_EVAL: bool = true;
 const TEMPO: Score = SCORE_BASE * 0;
 
 pub fn evaluate(board: &Board) -> Score {
@@ -23,8 +23,8 @@ pub fn evaluate(board: &Board) -> Score {
 fn evaluate_for_white(board: &Board) -> Score {
     let mut score = 0;
 
-    if SIMPLE_EVAL {
-        score += simpleval::evaluate(board);
+    if CRAZY_EVAL {
+        score += crazyval::evaluate(board);
     } else {
         score += pesto::evaluate(board);
     }
