@@ -92,11 +92,11 @@ impl GoOptions {
                 black_inc,
             } => {
                 let side = board.side_to_move();
-                let moves_left = 1 * board.pieces(Piece::Pawn).popcnt()
-                    + 2 * board.pieces(Piece::Knight).popcnt()
-                    + 2 * board.pieces(Piece::Bishop).popcnt()
-                    + 4 * board.pieces(Piece::Rook).popcnt()
-                    + 6 * board.pieces(Piece::Queen).popcnt()
+                let moves_left = board.pieces(Piece::Pawn).popcnt()
+                    + board.pieces(Piece::Knight).popcnt()
+                    + board.pieces(Piece::Bishop).popcnt()
+                    + 2 * board.pieces(Piece::Rook).popcnt()
+                    + 4 * board.pieces(Piece::Queen).popcnt()
                     + 8 * board.pieces(Piece::King).popcnt();
 
                 match side {
