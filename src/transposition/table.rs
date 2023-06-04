@@ -37,12 +37,10 @@ impl TTable {
     }
 
     pub fn update(&mut self, board: &Board, result: TTableEntry) {
-        self.queue.count(
-            self.table
-                .entry(*board)
-                .and_modify(|e| e.lazy_update(&result))
-                .or_insert(result.with_depth(0)),
-        );
+        if let Some(entry) = self.table.get_mut(board) {
+            entry.lazy_update(&result);
+            self.queue.count(entry);
+        }
     }
 
     pub fn get(&mut self, board: &Board) -> Option<&TTableEntry> {

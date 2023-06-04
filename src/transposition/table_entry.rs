@@ -52,13 +52,4 @@ impl TTableEntry {
             self.best_move = result.best_move;
         }
     }
-
-    pub fn with_depth(self, depth: Depth) -> TTableEntry {
-        TTableEntry {
-            depth,
-            score: self.score,
-            best_move: self.best_move,
-            marker: self.marker,
-        }
-    }
 }
