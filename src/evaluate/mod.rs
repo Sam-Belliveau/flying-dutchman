@@ -6,7 +6,7 @@ pub use self::score::*;
 
 use chess::{Board, BoardStatus, Color};
 
-const CRAZY_EVAL: bool = true;
+const CRAZY_EVAL: bool = false;
 const TEMPO: Score = SCORE_BASE * 0;
 
 pub fn evaluate(board: &Board) -> Score {
