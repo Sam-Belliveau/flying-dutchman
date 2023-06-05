@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 chess = "3.2.0"
 logos = "0.13.0"
+lru = "0.10.0"
 nohash-hasher = "0.1.3"

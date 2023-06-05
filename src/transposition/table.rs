@@ -1,95 +1,63 @@
-use std::{collections::HashMap, hash::BuildHasherDefault, mem::size_of};
+use std::{hash::BuildHasherDefault, mem::size_of, num::NonZeroUsize};
 
 use chess::Board;
+use lru::LruCache;
 
-use super::{markers::MarkerQueue, pv_line::PVLine, table_entry::TTableEntry};
+use super::{pv_line::PVLine, table_entry::TTableEntry};
 use nohash_hasher::NoHashHasher;
 
 const ELEMENT_SIZE: usize =
-    3 * (size_of::<TTableEntry>() + size_of::<Board>() + size_of::<u64>()) / 2;
+    3 * (size_of::<TTableEntry>() + size_of::<Board>() + 2 * size_of::<*const u64>()) / 2;
 
-pub type TTableHashMap = HashMap<Board, TTableEntry, BuildHasherDefault<NoHashHasher<u64>>>;
+pub type TTableHashMap = LruCache<Board, TTableEntry, BuildHasherDefault<NoHashHasher<u64>>>;
 
 pub struct TTable {
     table: TTableHashMap,
-    queue: MarkerQueue,
 }
 
 impl TTable {
     pub fn new(table_size: usize) -> TTable {
         TTable {
-            table: HashMap::with_hasher(BuildHasherDefault::default()),
-            queue: MarkerQueue::new(table_size / ELEMENT_SIZE),
+            table: TTableHashMap::with_hasher(
+                NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap(),
+                BuildHasherDefault::default(),
+            ),
         }
     }
 
     pub fn set_table_size(&mut self, table_size: usize) {
-        self.queue.set_table_size(table_size / ELEMENT_SIZE);
-    }
-
-    pub fn save(&mut self, board: &Board, result: TTableEntry) {
-        self.queue.count(
-            self.table
-                .entry(*board)
-                .and_modify(|e| e.update(&result))
-                .or_insert(result),
-        );
-    }
-
-    pub fn update(&mut self, board: &Board, result: TTableEntry) {
-        if let Some(entry) = self.table.get_mut(board) {
-            entry.lazy_update(&result);
-            self.queue.count(entry);
-        }
+        self.table
+            .resize(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap())
     }
 
     pub fn get(&mut self, board: &Board) -> Option<&TTableEntry> {
-        if let Some(entry) = self.table.get_mut(board) {
-            self.queue.count(entry);
-            Some(entry)
-        } else {
-            None
+        self.table.get(board)
+    }
+
+    pub fn update(&mut self, board: &Board, result: TTableEntry) {
+        let entry = self.table.get_or_insert_mut(*board, || result.clone());
+        entry.update(&result);
+    }
+
+    pub fn lazy_update(&mut self, board: &Board, result: TTableEntry) {
+        if let Some(entry) = self.table.peek_mut(board) {
+            entry.lazy_update(&result);
         }
     }
 
     pub fn get_pv_line(&mut self, board: Board) -> PVLine {
-        PVLine::new(&self.table, board)
+        PVLine::new(&mut self.table, board)
     }
 
     pub fn refresh_pv_line(&mut self, board: Board) {
         for _ in self.get_pv_line(board) {}
     }
 
-    pub fn sweep(&mut self) {
-        debug_assert_eq!(self.table.len(), self.queue.total());
-
-        let table_len = self.table.len();
-        let max_len = self.queue.max_table_size();
-
-        if table_len > max_len {
-            let quota = table_len - max_len / 2;
-
-            let mut amount = 0;
-            let mut sweeper = 0;
-
-            while let (Some((marker, count)), true) = (self.queue.pop(), amount < quota) {
-                amount += count;
-                sweeper = marker + 1;
-            }
-
-            self.table.retain(|_, v| sweeper < v.marker);
-        }
-    }
-
-    fn size_to_bytes(size: usize) -> usize {
-        size * ELEMENT_SIZE
-    }
-
     pub fn hashfull_permille(&self) -> usize {
-        self.table.len() * 1000 / self.queue.max_table_size()
+        self.table.len() * 1000 / self.table.cap()
     }
 
     pub fn memory_bytes(&self) -> usize {
-        Self::size_to_bytes(self.table.len())
+        self.table.len() * ELEMENT_SIZE
     }
 }

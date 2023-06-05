@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use chess::{Board, ChessMove};
+use chess::{Board, ChessMove, Color};
 
 use crate::evaluate::{Score, MATE_CUTOFF};
 use crate::search::qsearch::qsearch;
@@ -18,6 +18,7 @@ const DEFAULT_TABLE_SIZE: usize = 3000 * 1000 * 1000;
 pub struct Engine {
     pub table: TTable,
     nodes: usize,
+    side: Color,
 }
 
 impl Engine {
@@ -25,6 +26,7 @@ impl Engine {
         Engine {
             table: TTable::new(DEFAULT_TABLE_SIZE),
             nodes: 0,
+            side: Color::White,
         }
     }
 
@@ -46,7 +48,7 @@ impl Engine {
 
         if depth <= 0 {
             let score = qsearch(board);
-            self.table.save(&board, TTableEntry::leaf(score));
+            self.table.update(&board, TTableEntry::leaf(score));
             return Some(score);
         }
 
@@ -65,7 +67,7 @@ impl Engine {
                     eval.max(-self.ab_search(
                         next,
                         depth - 1,
-                        -(window.raise_min(eval)),
+                        -(window.raise_alpha(eval)),
                         deadline,
                     )?)
                 } else {
@@ -88,7 +90,7 @@ impl Engine {
                     }
 
                     self.table
-                        .update(&board, TTableEntry::new(depth, eval, movement));
+                        .lazy_update(&board, TTableEntry::new(depth, eval, movement));
                     return Some(eval);
                 }
             }
@@ -96,9 +98,9 @@ impl Engine {
 
         if let Some(best_move) = best_move {
             self.table
-                .save(&board, TTableEntry::new(depth, window.alpha(), best_move));
+                .update(&board, TTableEntry::new(depth, window.alpha(), best_move));
         } else {
-            self.table.save(&board, TTableEntry::leaf(window.alpha()));
+            self.table.update(&board, TTableEntry::leaf(window.alpha()));
         }
 
         Some(window.alpha())
@@ -128,9 +130,8 @@ impl Engine {
     ) -> Option<Score> {
         let previous = self.min_search(board);
 
+        self.side = board.side_to_move();
         self.table.refresh_pv_line(*board);
-        self.table.sweep();
-
         self.ab_search(*board, previous.depth + 1, AlphaBeta::new(), deadline)
     }
 

@@ -5,14 +5,11 @@ use crate::{
     search::Depth,
 };
 
-use super::markers::Marker;
-
 #[derive(Clone, Debug)]
 pub struct TTableEntry {
     pub depth: Depth,
     pub score: Score,
     pub best_move: Option<ChessMove>,
-    pub marker: Marker,
 }
 
 impl TTableEntry {
@@ -21,7 +18,6 @@ impl TTableEntry {
             score,
             depth: depth.max(0),
             best_move: Some(best_move),
-            marker: 0,
         }
     }
 
@@ -30,7 +26,6 @@ impl TTableEntry {
             score,
             depth: 0,
             best_move: None,
-            marker: 0,
         }
     }
 
