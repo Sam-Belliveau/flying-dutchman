@@ -156,7 +156,6 @@ impl Engine {
         let previous = self.min_search(board);
         let depth = previous.depth + 1;
 
-        self.table.refresh_pv_line(*board);
         self.ab_search(*board, depth, AlphaBeta::new(), deadline)
     }
 

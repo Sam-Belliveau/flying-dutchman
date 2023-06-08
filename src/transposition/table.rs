@@ -1,4 +1,4 @@
-use std::{collections::HashSet, mem::size_of, num::NonZeroUsize};
+use std::{mem::size_of, num::NonZeroUsize};
 
 use chess::Board;
 use lru::LruCache;
@@ -124,28 +124,6 @@ impl TTable {
 
     pub fn get_pv_line(&mut self, board: Board) -> PVLine {
         PVLine::new(&mut self.table, board)
-    }
-
-    fn explore_pv_line(&mut self, board: Board, explored: &mut HashSet<Board>) {
-        if explored.insert(board) {
-            if let Some(moves) = (self.table.peek(&(Exact, board)))
-                .or_else(|| self.table.peek(&(Upper, board)))
-                .or_else(|| self.table.peek(&(Lower, board)))
-                .map(|f| f.moves)
-            {
-                self.table.promote(&(Exact, board));
-                self.table.promote(&(Lower, board));
-                self.table.promote(&(Upper, board));
-
-                for movement in moves {
-                    self.explore_pv_line(board.make_move_new(movement), explored);
-                }
-            }
-        }
-    }
-
-    pub fn refresh_pv_line(&mut self, board: Board) {
-        self.explore_pv_line(board, &mut HashSet::new());
     }
 
     pub fn hashfull_permille(&self) -> usize {
