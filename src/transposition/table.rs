@@ -131,7 +131,7 @@ impl TTable {
             if let Some(moves) = (self.table.peek(&(Exact, board)))
                 .or_else(|| self.table.peek(&(Upper, board)))
                 .or_else(|| self.table.peek(&(Lower, board)))
-                .map(|f| f.moves.clone())
+                .map(|f| f.moves)
             {
                 self.table.promote(&(Exact, board));
                 self.table.promote(&(Lower, board));
