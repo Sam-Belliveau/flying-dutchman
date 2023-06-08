@@ -85,12 +85,16 @@ impl TTable {
             }
         }
 
+        if LEAF {
+            return TTableSample::None;
+        }
+
         if let Some(saved) = self.table.peek(&(Upper, *board)) {
-            if !LEAF && saved.moves.is_some() {
+            if saved.moves.is_some() {
                 pv = pv.or(Some(saved.moves));
             }
 
-            if LEAF || depth <= saved.depth {
+            if depth <= saved.depth {
                 let score = saved.score();
                 if let ProbeResult::AlphaPrune { .. } = window.probe(score) {
                     let result = TTableSample::Score(saved.score());
@@ -101,11 +105,11 @@ impl TTable {
         }
 
         if let Some(saved) = self.table.peek(&(Lower, *board)) {
-            if !LEAF && saved.moves.is_some() {
+            if saved.moves.is_some() {
                 pv = pv.or(Some(saved.moves));
             }
 
-            if LEAF || depth <= saved.depth {
+            if depth <= saved.depth {
                 let score = saved.score();
                 if let ProbeResult::BetaPrune { .. } = window.probe(score) {
                     let result = TTableSample::Score(saved.score());
