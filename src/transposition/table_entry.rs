@@ -1,50 +1,50 @@
-use chess::ChessMove;
-
 use crate::{
     evaluate::{Score, MATE_CUTOFF},
     search::Depth,
 };
 
+use super::best_moves::BestMoves;
+
 #[derive(Clone, Debug)]
 pub struct TTableEntry {
     pub depth: Depth,
-    pub score: Score,
-    pub best_move: Option<ChessMove>,
+    pub moves: BestMoves,
 }
 
 impl TTableEntry {
-    pub fn new(depth: Depth, score: Score, best_move: ChessMove) -> TTableEntry {
-        TTableEntry {
-            score,
-            depth: depth.max(0),
-            best_move: Some(best_move),
+    pub fn new(depth: Depth, moves: BestMoves) -> TTableEntry {
+        if moves.is_some() {
+            TTableEntry {
+                depth: depth.max(0),
+                moves,
+            }
+        } else {
+            TTableEntry::leaf(moves.score())
         }
     }
 
     pub fn leaf(score: Score) -> TTableEntry {
         TTableEntry {
-            score,
             depth: 0,
-            best_move: None,
+            moves: BestMoves::None(score),
         }
     }
 
     pub fn is_edge(&self) -> bool {
-        self.score.abs() >= MATE_CUTOFF && self.depth < 1
+        self.moves.score().abs() >= MATE_CUTOFF && self.depth < 1
     }
 
     pub fn update(&mut self, result: &TTableEntry) {
-        if self.depth <= result.depth {
+        if (self.depth.cmp(&result.depth))
+            .then(self.score().cmp(&result.score()))
+            .is_lt()
+        {
             self.depth = result.depth;
-            self.score = result.score;
-            self.best_move = result.best_move;
+            self.moves = result.moves;
         }
     }
 
-    pub fn lazy_update(&mut self, result: &TTableEntry) {
-        if self.depth <= result.depth && self.score < result.score {
-            self.score = result.score;
-            self.best_move = result.best_move;
-        }
+    pub fn score(&self) -> Score {
+        self.moves.score()
     }
 }

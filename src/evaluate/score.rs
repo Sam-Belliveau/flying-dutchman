@@ -8,6 +8,19 @@ pub const MATE_MOVE: Score = MATE / 256;
 
 pub const SCORE_BASE: Score = 2 * 3 * 4 * 5 * 6 * 7 * 8;
 
+pub fn score_mark(score: Score) -> Score {
+    // This is how we keep track of how many moves we are from mate.
+    // Every time we call this function, we take a bit from the score,
+    // to indicate that it takes an extra move to get here.
+    if score >= MATE_CUTOFF {
+        score - MATE_MOVE
+    } else if score <= -MATE_CUTOFF {
+        score + MATE_MOVE
+    } else {
+        score
+    }
+}
+
 pub fn score_to_cp(score: Score) -> Score {
     score / (SCORE_BASE)
 }

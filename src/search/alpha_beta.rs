@@ -1,20 +1,23 @@
 use std::ops;
 
-use crate::evaluate::{Score, MATE, MATE_CUTOFF, MATE_MOVE};
+use crate::{
+    evaluate::{Score, MATE},
+    transposition::table::TTableType,
+};
 
 pub enum NegaMaxResult {
     Worse { delta: Score },
-    Best,
+    Best { score: Score },
     Pruned { beta: Score },
 }
 
 pub enum ProbeResult {
     AlphaPrune { alpha: Score },
-    Contained,
+    Contained { score: Score },
     BetaPrune { beta: Score },
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AlphaBeta {
     alpha: Score,
     beta: Score,
@@ -34,7 +37,7 @@ impl AlphaBeta {
             NegaMaxResult::Pruned { beta: self.beta }
         } else if self.alpha < score {
             self.alpha = score;
-            NegaMaxResult::Best
+            NegaMaxResult::Best { score }
         } else {
             NegaMaxResult::Worse {
                 delta: self.alpha - score,
@@ -48,35 +51,22 @@ impl AlphaBeta {
         } else if score >= self.beta {
             ProbeResult::BetaPrune { beta: self.beta }
         } else {
-            ProbeResult::Contained
+            ProbeResult::Contained { score }
         }
     }
 
-    pub fn raise_alpha(&self, score: Score) -> AlphaBeta {
-        AlphaBeta {
-            alpha: self.alpha.max(score),
-            beta: self.beta,
-        }
-    }
-
-    pub fn null_window(&self) -> AlphaBeta {
-        AlphaBeta {
-            alpha: self.alpha,
-            beta: self.alpha + 1,
+    pub fn table_type(&self, score: Score) -> TTableType {
+        if score < self.alpha {
+            TTableType::Upper
+        } else if score > self.beta {
+            TTableType::Lower
+        } else {
+            TTableType::Exact
         }
     }
 
     pub fn alpha(&self) -> Score {
-        // This is how we keep track of how many moves we are from mate.
-        // Every time we call this function, we take a bit from the score,
-        // to indicate that it takes an extra move to get here.
-        if self.alpha >= MATE_CUTOFF {
-            self.alpha - MATE_MOVE
-        } else if self.alpha <= -MATE_CUTOFF {
-            self.alpha + MATE_MOVE
-        } else {
-            self.alpha
-        }
+        self.alpha
     }
 }
 

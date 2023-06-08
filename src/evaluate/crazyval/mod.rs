@@ -1,8 +1,8 @@
 use chess::{get_king_moves, BitBoard, Board, Color, MoveGen, Piece, EMPTY};
 
-use crate::evaluate::pesto::{phased_score::PhasedScore, gamephase::GamePhase};
+use crate::evaluate::pesto::{gamephase::GamePhase, phased_score::PhasedScore};
 
-use super::{Score, SCORE_BASE, pesto};
+use super::{pesto, Score, SCORE_BASE};
 
 // Value of attacking an enemy piece
 const ATTACK: Score = SCORE_BASE / 3;

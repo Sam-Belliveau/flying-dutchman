@@ -2,10 +2,11 @@ use std::time::Instant;
 
 use chess::{Board, ChessMove, Color};
 
-use crate::evaluate::{Score, MATE_CUTOFF};
-use crate::search::qsearch::qsearch;
+use crate::evaluate::{score_mark, Score};
+use crate::search::qsearch::*;
+use crate::transposition::best_moves::{BestMoves, RatedMove};
 use crate::transposition::pv_line::PVLine;
-use crate::transposition::table::TTable;
+use crate::transposition::table::{TTable, TTableType::*};
 use crate::transposition::table_entry::TTableEntry;
 
 use super::alpha_beta::{AlphaBeta, NegaMaxResult::*, ProbeResult::*};
@@ -30,85 +31,86 @@ impl Engine {
         }
     }
 
+    fn wrap(score: Score) -> Result<Score, ()> {
+        Ok(score_mark(score))
+    }
+
     fn ab_search(
         &mut self,
         board: Board,
         depth: Depth,
         mut window: AlphaBeta,
         deadline: &Deadline,
-    ) -> Option<Score> {
+    ) -> Result<Score, ()> {
         self.nodes += 1;
-        let entry = self.table.get(&board);
 
-        if let Some(saved) = entry {
+        let mut pv = None;
+
+        if let Some(saved) = self.table.get(Exact, board) {
+            pv = pv.or(Some(saved.moves));
             if depth <= saved.depth {
-                return Some(saved.score);
+                return Self::wrap(saved.score());
+            }
+        }
+
+        if let Some(saved) = self.table.get(Lower, board) {
+            pv = pv.or(Some(saved.moves));
+            if depth <= saved.depth {
+                let score = saved.score();
+                if let Pruned { .. } = window.negamax(score) {
+                    return Self::wrap(saved.score());
+                }
+            }
+        }
+
+        if let Some(saved) = self.table.get(Upper, board) {
+            pv = pv.or(Some(saved.moves));
+            if depth <= saved.depth {
+                let score = saved.score();
+                if let AlphaPrune { .. } = window.probe(score) {
+                    return Self::wrap(saved.score());
+                }
             }
         }
 
         if depth <= 0 {
-            let score = qsearch(board);
-            self.table.update(&board, TTableEntry::leaf(score));
-            return Some(score);
+            let eval = ab_qsearch(board, window);
+
+            self.table
+                .update(window.table_type(eval), board, TTableEntry::leaf(eval));
+
+            return Self::wrap(eval);
         }
 
         if deadline.passed() {
-            return None;
+            return Err(());
         }
 
-        let mut best_move = None;
-        for movement in OrderedMoveGen::full_search(&board, entry.and_then(|f| f.best_move)) {
+        let mut moves = BestMoves::new();
+        for movement in OrderedMoveGen::full_search(&board, pv.unwrap_or_default()) {
             let next = board.make_move_new(movement);
+            let eval = -self.ab_search(next, depth - 1, -window, deadline)?;
 
-            let eval = if best_move.is_some() {
-                let eval = -self.ab_search(next, depth - 1, -window.null_window(), deadline)?;
+            moves.push(RatedMove::new(eval, movement));
+            if let Pruned { .. } = window.negamax(eval) {
+                let entry = TTableEntry::new(depth, moves);
+                self.table.update(Lower, board, entry);
 
-                if let Contained = window.probe(eval) {
-                    eval.max(-self.ab_search(
-                        next,
-                        depth - 1,
-                        -(window.raise_alpha(eval)),
-                        deadline,
-                    )?)
-                } else {
-                    eval
-                }
-            } else {
-                -self.ab_search(next, depth - 1, -window, deadline)?
-            };
-
-            match window.negamax(eval) {
-                Worse { .. } => {}
-                Best => {
-                    best_move = Some(movement);
-                }
-                Pruned { .. } => {
-                    best_move = Some(movement);
-
-                    if eval >= MATE_CUTOFF {
-                        break;
-                    }
-
-                    self.table
-                        .lazy_update(&board, TTableEntry::new(depth, eval, movement));
-                    return Some(eval);
-                }
+                return Self::wrap(eval);
             }
         }
 
-        if let Some(best_move) = best_move {
-            self.table
-                .update(&board, TTableEntry::new(depth, window.alpha(), best_move));
-        } else {
-            self.table.update(&board, TTableEntry::leaf(window.alpha()));
-        }
+        let score = moves.score();
 
-        Some(window.alpha())
+        let entry = TTableEntry::new(depth, moves);
+        self.table.update(window.table_type(score), board, entry);
+
+        Self::wrap(score)
     }
 
     pub fn min_search(&mut self, board: &Board) -> TTableEntry {
-        if let Some(result) = self.table.get(board) {
-            if result.best_move.is_some() || result.is_edge() {
+        if let Some(result) = self.table.get(Exact, *board) {
+            if result.moves.is_some() || result.is_edge() {
                 return result.clone();
             }
         }
@@ -116,7 +118,7 @@ impl Engine {
         self.ab_search(*board, 1, AlphaBeta::new(), &Deadline::none())
             .expect("Expected Complete Search");
 
-        return self.table.get(board).unwrap().clone();
+        return self.table.get(Exact, *board).unwrap().clone();
     }
 
     pub fn get_pv_line(&mut self, board: Board) -> PVLine {
@@ -127,16 +129,18 @@ impl Engine {
         &mut self,
         board: &Board,
         deadline: &Deadline,
-    ) -> Option<Score> {
-        let previous = self.min_search(board);
-
+    ) -> Result<Score, ()> {
         self.side = board.side_to_move();
+
+        let previous = self.min_search(board);
+        let depth = previous.depth + 1;
+
         self.table.refresh_pv_line(*board);
-        self.ab_search(*board, previous.depth + 1, AlphaBeta::new(), deadline)
+        self.ab_search(*board, depth, AlphaBeta::new(), deadline)
     }
 
     pub fn best_move(&mut self, board: &Board) -> Option<ChessMove> {
-        self.min_search(board).best_move
+        self.min_search(board).moves.peek()
     }
 
     pub fn start_new_search(&mut self) -> Instant {

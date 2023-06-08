@@ -36,7 +36,6 @@ impl PieceSquareTable {
             Color::Black => square.to_index(),
         };
 
-
         RawPhasedScore::new(self.mg[index], self.eg[index]).colorize(color)
     }
 

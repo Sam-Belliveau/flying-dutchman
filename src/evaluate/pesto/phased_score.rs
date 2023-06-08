@@ -71,7 +71,7 @@ impl std::ops::AddAssign for PhasedScore {
 }
 
 impl std::ops::Mul<Score> for PhasedScore {
-    type Output= PhasedScore;
+    type Output = PhasedScore;
 
     fn mul(self, rhs: Score) -> Self::Output {
         PhasedScore {

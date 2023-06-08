@@ -5,9 +5,7 @@ use std::{
 
 use chess::Board;
 
-use crate::{
-    search::{deadline::Deadline, engine::Engine},
-};
+use crate::search::{deadline::Deadline, engine::Engine};
 
 use super::display;
 
@@ -44,7 +42,7 @@ impl UCIThread {
 
                 let mut reps = 0;
                 let mut presult = None;
-                while let Some(result) = engine.iterative_deepening_search(&board, &deadline) {
+                while let Ok(result) = engine.iterative_deepening_search(&board, &deadline) {
                     if presult == Some(result) {
                         reps += 1;
 

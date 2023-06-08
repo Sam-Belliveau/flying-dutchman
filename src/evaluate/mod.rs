@@ -1,6 +1,6 @@
+pub mod crazyval;
 pub mod pesto;
 pub mod score;
-pub mod crazyval;
 
 pub use self::score::*;
 

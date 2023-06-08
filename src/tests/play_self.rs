@@ -13,9 +13,10 @@ fn print_result(title: &str, result: TTableEntry) {
         "{}|   Depth:{:16.3}   |   Score{:16.3}   |   Move {}",
         title,
         result.depth,
-        score_to_cp(result.score),
+        score_to_cp(result.score()),
         result
-            .best_move
+            .moves
+            .peek()
             .map_or(String::from("None"), |m| m.to_string())
     );
     std::io::stdout().flush().unwrap();
@@ -45,7 +46,7 @@ pub fn play_self() {
         print_result("Init   ", engine.min_search(&board));
         let mut rep = 0;
         let mut presult = None;
-        while let Some(result) = engine.iterative_deepening_search(&board, &deadline) {
+        while let Ok(result) = engine.iterative_deepening_search(&board, &deadline) {
             print_result("Iter   ", engine.min_search(&board));
 
             if presult == Some(result) {
