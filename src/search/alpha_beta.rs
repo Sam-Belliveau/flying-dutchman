@@ -1,7 +1,7 @@
 use std::ops;
 
 use crate::{
-    evaluate::{Score, MATE},
+    evaluate::{Score, MATE, MATE_MOVE},
     transposition::table::TTableType,
 };
 
@@ -19,15 +19,15 @@ pub enum ProbeResult {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AlphaBeta {
-    alpha: Score,
-    beta: Score,
+    pub alpha: Score,
+    pub beta: Score,
 }
 
 impl AlphaBeta {
     pub fn new() -> Self {
         Self {
-            alpha: -MATE,
-            beta: MATE,
+            alpha: -MATE - MATE_MOVE,
+            beta: MATE + MATE_MOVE,
         }
     }
 
@@ -35,7 +35,7 @@ impl AlphaBeta {
         if self.beta <= score {
             self.alpha = score;
             NegaMaxResult::Pruned { beta: self.beta }
-        } else if self.alpha < score {
+        } else if self.alpha <= score {
             self.alpha = score;
             NegaMaxResult::Best { score }
         } else {
@@ -65,8 +65,18 @@ impl AlphaBeta {
         }
     }
 
-    pub fn alpha(&self) -> Score {
-        self.alpha
+    pub fn null_window(&self) -> AlphaBeta {
+        AlphaBeta {
+            alpha: self.alpha,
+            beta: self.alpha + 1,
+        }
+    }
+
+    pub fn raise_alpha(&self, score: Score) -> AlphaBeta {
+        AlphaBeta {
+            alpha: self.alpha.max(score),
+            beta: self.beta,
+        }
     }
 }
 

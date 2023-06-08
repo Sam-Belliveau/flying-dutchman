@@ -26,13 +26,13 @@ macro_rules! uci_end {
 pub fn board_information(engine: &mut Engine, board: Board, search_start: Instant) {
     let board_info = engine.min_search(&board);
 
-    let time_nano = search_start.elapsed().as_nanos() as usize;
+    let time_nano = search_start.elapsed().as_nanos() as usize + 1;
 
     let depth = board_info.depth;
     let seldepth = engine.get_pv_line(board).count();
     let multipv = 1;
     let score = score_to_str(board_info.score());
-    let nodes = engine.get_node_count();
+    let nodes = 1 + engine.get_node_count();
     let nps = nodes * 1_000_000_000 / time_nano;
     let hashfull = engine.table.hashfull_permille();
     let tbhits = 0;

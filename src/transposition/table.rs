@@ -3,7 +3,15 @@ use std::{collections::HashSet, mem::size_of, num::NonZeroUsize};
 use chess::Board;
 use lru::LruCache;
 
-use super::{pv_line::PVLine, table_entry::TTableEntry};
+use crate::{
+    evaluate::Score,
+    search::{
+        alpha_beta::{AlphaBeta, ProbeResult},
+        Depth,
+    },
+};
+
+use super::{best_moves::BestMoves, pv_line::PVLine, table_entry::TTableEntry};
 
 const ELEMENT_SIZE: usize = 11
     * (size_of::<*const Board>()
@@ -23,6 +31,12 @@ pub enum TTableType {
 }
 
 use TTableType::*;
+
+pub enum TTableSample {
+    None,
+    Moves(BestMoves),
+    Score(Score),
+}
 
 pub struct TTable {
     table: TTableHashMap,
@@ -44,20 +58,67 @@ impl TTable {
         self.table.get(&(ttype, board))
     }
 
-    fn free_space(&self) -> bool {
-        self.table.len() < self.table.cap().into()
+    pub fn update(&mut self, ttype: TTableType, board: Board, result: TTableEntry) {
+        let entry = self
+            .table
+            .get_or_insert_mut((ttype, board), || result.clone());
+        entry.update(&result);
     }
 
-    pub fn update(&mut self, ttype: TTableType, board: Board, result: TTableEntry) {
-        if self.free_space() || ttype == Exact {
-            let entry = self
-                .table
-                .get_or_insert_mut((ttype, board), || result.clone());
-            entry.update(&result);
-        } else {
-            if let Some(entry) = self.table.get_mut(&(ttype, board)) {
-                entry.update(&result);
+    pub fn sample<const LEAF: bool>(
+        &mut self,
+        board: &Board,
+        window: &AlphaBeta,
+        depth: Depth,
+    ) -> TTableSample {
+        let mut pv = None;
+
+        if let Some(saved) = self.table.peek(&(Exact, *board)) {
+            if !LEAF && saved.moves.is_some() {
+                pv = pv.or(Some(saved.moves));
             }
+
+            if LEAF || depth <= saved.depth {
+                let result = TTableSample::Score(saved.score());
+                self.table.promote(&(Exact, *board));
+                return result;
+            }
+        }
+
+        if let Some(saved) = self.table.peek(&(Upper, *board)) {
+            if !LEAF && saved.moves.is_some() {
+                pv = pv.or(Some(saved.moves));
+            }
+
+            if LEAF || depth <= saved.depth {
+                let score = saved.score();
+                if let ProbeResult::AlphaPrune { .. } = window.probe(score) {
+                    let result = TTableSample::Score(saved.score());
+                    self.table.promote(&(Upper, *board));
+                    return result;
+                }
+            }
+        }
+
+        if let Some(saved) = self.table.peek(&(Lower, *board)) {
+            if !LEAF && saved.moves.is_some() {
+                pv = pv.or(Some(saved.moves));
+            }
+
+            if LEAF || depth <= saved.depth {
+                let score = saved.score();
+                if let ProbeResult::BetaPrune { .. } = window.probe(score) {
+                    let result = TTableSample::Score(saved.score());
+                    self.table.promote(&(Lower, *board));
+                    return result;
+                }
+            }
+        }
+
+        if let Some(moves) = pv {
+            TTableSample::Moves(moves)
+        } else {
+            TTableSample::None
         }
     }
 
@@ -68,8 +129,8 @@ impl TTable {
     fn explore_pv_line(&mut self, board: Board, explored: &mut HashSet<Board>) {
         if explored.insert(board) {
             if let Some(moves) = (self.table.peek(&(Exact, board)))
-                .or_else(|| self.table.peek(&(Lower, board)))
                 .or_else(|| self.table.peek(&(Upper, board)))
+                .or_else(|| self.table.peek(&(Lower, board)))
                 .map(|f| f.moves.clone())
             {
                 self.table.promote(&(Exact, board));

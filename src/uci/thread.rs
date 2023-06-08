@@ -40,19 +40,7 @@ impl UCIThread {
                     display::board_information(&mut engine, board, start);
                 }
 
-                let mut reps = 0;
-                let mut presult = None;
-                while let Ok(result) = engine.iterative_deepening_search(&board, &deadline) {
-                    if presult == Some(result) {
-                        reps += 1;
-
-                        if reps >= 16 {
-                            break;
-                        }
-                    } else {
-                        presult = Some(result);
-                    }
-
+                while let Ok(..) = engine.iterative_deepening_search(&board, &deadline) {
                     if print_result {
                         display::board_information(&mut engine, board, start);
                     }
@@ -70,15 +58,13 @@ impl UCIThread {
     }
 
     pub fn search(&mut self, board: Board, deadline: Deadline) {
-        if let Some(thread) = &self.search_thread {
-            if thread.is_finished() {
-                self.search_thread = None;
-            } else {
+        if let Some(thread) = self.search_thread.take() {
+            if !thread.is_finished() {
                 panic!("Search thread already running");
             }
         }
 
-        self.deadline = deadline.into();
+        self.deadline = Arc::new(deadline);
         self.board = board;
 
         self.search_thread = Some(Self::search_thread(

@@ -13,13 +13,9 @@ pub struct TTableEntry {
 
 impl TTableEntry {
     pub fn new(depth: Depth, moves: BestMoves) -> TTableEntry {
-        if moves.is_some() {
-            TTableEntry {
-                depth: depth.max(0),
-                moves,
-            }
-        } else {
-            TTableEntry::leaf(moves.score())
+        TTableEntry {
+            depth: depth.max(0),
+            moves,
         }
     }
 

@@ -7,5 +7,5 @@ pub mod thread;
 pub mod tokens;
 
 pub fn stdout_sync() {
-    io::stdout().flush().unwrap();
+    let _ = io::stdout().flush();
 }
