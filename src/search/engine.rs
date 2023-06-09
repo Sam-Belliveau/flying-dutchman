@@ -40,6 +40,8 @@ impl Engine {
             _ => {}
         };
 
+        let start_alpha = window.alpha;
+
         let movegen = {
             if *board.checkers() == EMPTY {
                 let score = evaluate(&board);
@@ -58,13 +60,15 @@ impl Engine {
             let score = -self.ab_qsearch(new_board, -window)?;
 
             if let Pruned { .. } = window.negamax(score) {
-                self.table.update(Lower, board, TTableEntry::leaf(score));
                 return Self::wrap(score);
             }
         }
 
-        self.table
-            .update(Exact, board, TTableEntry::leaf(window.alpha));
+        if start_alpha < window.alpha {
+            self.table
+                .update(Exact, board, TTableEntry::leaf(window.alpha));
+        }
+
         Self::wrap(window.alpha)
     }
 
