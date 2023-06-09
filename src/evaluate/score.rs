@@ -1,12 +1,15 @@
-// score.rs
-
 pub type Score = i64;
 
-pub const MATE: Score = Score::MAX / 2;
-pub const MATE_CUTOFF: Score = MATE / 2;
-pub const MATE_MOVE: Score = MATE / 256;
+// By defining a Centipawn as this number,
+// the score will be a multiple of many prime factors,
+// making it easier to divide and work with.
+pub const CENTIPAWN: Score = 720720;
 
-pub const SCORE_BASE: Score = 2 * 3 * 4 * 5 * 6 * 7 * 8;
+pub const MATE: Score = Score::MAX / 2;
+pub const MATE_MOVE: Score = CENTIPAWN;
+pub const MATE_CUTOFF: Score = MATE - 1024 * MATE_MOVE;
+
+pub const DRAW: Score = -MATE;
 
 pub fn score_mark(score: Score) -> Score {
     // This is how we keep track of how many moves we are from mate.
@@ -22,15 +25,19 @@ pub fn score_mark(score: Score) -> Score {
 }
 
 pub fn score_to_cp(score: Score) -> Score {
-    score / (SCORE_BASE)
+    score / (CENTIPAWN)
 }
 
 pub fn score_to_str(score: Score) -> String {
+    let side = if score < 0 { "-" } else { "" };
+    let score = score.abs();
+
     if score >= MATE_CUTOFF {
-        format!("mate {}", (MATE - score) / (2 * MATE_MOVE))
-    } else if score <= -MATE_CUTOFF {
-        format!("mate -{}", (score + MATE) / (2 * MATE_MOVE))
+        let diff = MATE - score;
+        let moves = (diff + 3 * MATE_MOVE / 2) / (2 * MATE_MOVE);
+
+        format!("mate {}{}", side, moves)
     } else {
-        format!("cp {}", score_to_cp(score))
+        format!("cp {}{}", side, score_to_cp(score))
     }
 }

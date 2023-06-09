@@ -3,21 +3,21 @@ use std::{io::Write, time::Duration};
 use chess::{Board, Color};
 
 use crate::{
-    evaluate::score_to_cp,
+    evaluate::score_to_str,
     search::{deadline::Deadline, engine::Engine},
     transposition::table_entry::TTableEntry,
 };
 
 fn print_result(title: &str, result: TTableEntry) {
     println!(
-        "{}|   Depth:{:16.3}   |   Score{:16.3}   |   Move {}",
+        "{}|   Depth:{:16.3}   |   Move {}   |    Score {}",
         title,
         result.depth,
-        score_to_cp(result.score()),
         result
             .moves
             .peek()
-            .map_or(String::from("None"), |m| m.to_string())
+            .map_or(String::from("None"), |m| m.to_string()),
+        score_to_str(result.score()),
     );
     std::io::stdout().flush().unwrap();
 }

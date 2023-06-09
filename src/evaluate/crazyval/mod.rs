@@ -2,16 +2,16 @@ use chess::{get_king_moves, BitBoard, Board, Color, MoveGen, Piece, EMPTY};
 
 use crate::evaluate::pesto::{gamephase::GamePhase, phased_score::PhasedScore};
 
-use super::{pesto, Score, SCORE_BASE};
+use super::{pesto, Score, CENTIPAWN};
 
 // Value of attacking an enemy piece
-const ATTACK: Score = SCORE_BASE / 3;
+const ATTACK: Score = CENTIPAWN / 3;
 
 // Value of attacking an enemy piece near a square
-const NEAR_KING: Score = SCORE_BASE / 9;
+const NEAR_KING: Score = ATTACK / 3;
 
 // Value of being able to move to a vacant square
-const HOLD: Score = SCORE_BASE / 27;
+const HOLD: Score = NEAR_KING / 3;
 
 pub fn evaluate(board: &Board) -> Score {
     let mut score = 0;

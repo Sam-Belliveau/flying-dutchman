@@ -9,7 +9,7 @@ use chess::{
 
 use self::{gamephase::GamePhase, phased_score::PhasedScore, psq_table::PieceSquareTable};
 
-use super::{Score, SCORE_BASE};
+use super::{Score, CENTIPAWN};
 
 pub fn evaluate(board: &Board) -> Score {
     let gamephase = GamePhase::new(board);
@@ -34,5 +34,5 @@ pub fn evaluate(board: &Board) -> Score {
         }
     }
 
-    (score * SCORE_BASE).collapse(gamephase)
+    (score * CENTIPAWN).collapse(gamephase)
 }
