@@ -1,7 +1,7 @@
 use std::ops;
 
 use crate::{
-    evaluate::{Score, MATE, MATE_MOVE},
+    evaluate::{Score, MATE},
     transposition::table::TTableType,
 };
 
@@ -26,8 +26,8 @@ pub struct AlphaBeta {
 impl AlphaBeta {
     pub fn new() -> Self {
         Self {
-            alpha: -MATE - MATE_MOVE,
-            beta: MATE + MATE_MOVE,
+            alpha: -MATE,
+            beta: MATE,
         }
     }
 
