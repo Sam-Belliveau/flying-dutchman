@@ -80,7 +80,8 @@ impl TTable {
             }
 
             if LEAF || depth <= saved.depth {
-                let result = TTableSample::Score(saved.moves.get_score(opponent));
+                let score = saved.moves.get_score(opponent);
+                let result = TTableSample::Score(score);
                 self.table.promote(&(Exact, *board));
                 return result;
             }

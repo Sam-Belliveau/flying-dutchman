@@ -135,7 +135,7 @@ impl BestMoves {
     }
 
     pub fn get_score(&self, opponent: bool) -> Score {
-        const CONTEMPT: bool = true;
+        const CONTEMPT: bool = false;
 
         if opponent {
             if CONTEMPT {
