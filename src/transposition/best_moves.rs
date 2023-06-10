@@ -135,10 +135,17 @@ impl BestMoves {
     }
 
     pub fn get_score(&self, opponent: bool) -> Score {
-        const CONTEMPT: bool = false;
+        // This boolean controls whether or not we assume
+        // that the opponent will play the best move
+        const NORMAL: bool = false;
 
-        if opponent {
-            if CONTEMPT {
+        // If normal is set to false, then this boolean
+        // controls how bad we assume the other player
+        // is going to be.
+        const STUPID: bool = false;
+
+        if !NORMAL && opponent {
+            if STUPID {
                 self.worst_score()
             } else {
                 self.avg_score()
