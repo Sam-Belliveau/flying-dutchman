@@ -27,7 +27,7 @@ impl TTableEntry {
     }
 
     pub fn is_edge(&self) -> bool {
-        self.moves.score().abs() >= MATE_CUTOFF && self.depth < 1
+        self.moves.best_score().abs() >= MATE_CUTOFF && self.depth < 1
     }
 
     pub fn update(&mut self, result: &TTableEntry) {
@@ -41,6 +41,6 @@ impl TTableEntry {
     }
 
     pub fn score(&self) -> Score {
-        self.moves.score()
+        self.moves.best_score()
     }
 }

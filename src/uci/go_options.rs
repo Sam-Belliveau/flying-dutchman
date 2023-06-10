@@ -103,7 +103,9 @@ impl GoOptions {
                     chess::Color::Black => (black_time, black_inc),
                 };
 
-                let maxtime = time - BUFFER;
+                let maxtime_a = time - BUFFER;
+                let maxtime_b = time / 5;
+                let maxtime = maxtime_a.min(maxtime_b);
                 let movetime = time / moves_left + inc - BUFFER;
                 Deadline::timeout(movetime.min(maxtime))
             }

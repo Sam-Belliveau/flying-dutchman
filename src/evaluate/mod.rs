@@ -7,15 +7,15 @@ pub use self::score::*;
 use chess::{Board, BoardStatus, Color};
 
 const CRAZY_EVAL: bool = false;
-const TEMPO: Score = CENTIPAWN * 0;
+const ZERO: Score = 0;
 
 pub fn evaluate(board: &Board) -> Score {
     match board.status() {
         BoardStatus::Checkmate => -MATE,
         BoardStatus::Stalemate => -DRAW,
         BoardStatus::Ongoing => match board.side_to_move() {
-            Color::White => TEMPO + evaluate_for_white(board),
-            Color::Black => TEMPO - evaluate_for_white(board),
+            Color::White => ZERO + evaluate_for_white(board),
+            Color::Black => ZERO - evaluate_for_white(board),
         },
     }
 }

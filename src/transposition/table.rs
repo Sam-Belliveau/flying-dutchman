@@ -69,6 +69,7 @@ impl TTable {
         &mut self,
         board: &Board,
         window: &AlphaBeta,
+        opponent: bool,
         depth: Depth,
     ) -> TTableSample {
         let mut pv = None;
@@ -79,7 +80,7 @@ impl TTable {
             }
 
             if LEAF || depth <= saved.depth {
-                let result = TTableSample::Score(saved.score());
+                let result = TTableSample::Score(saved.moves.get_score(opponent));
                 self.table.promote(&(Exact, *board));
                 return result;
             }
@@ -95,9 +96,9 @@ impl TTable {
             }
 
             if depth <= saved.depth {
-                let score = saved.score();
+                let score = saved.moves.get_score(opponent);
                 if let ProbeResult::AlphaPrune { .. } = window.probe(score) {
-                    let result = TTableSample::Score(saved.score());
+                    let result = TTableSample::Score(score);
                     self.table.promote(&(Upper, *board));
                     return result;
                 }
@@ -110,9 +111,9 @@ impl TTable {
             }
 
             if depth <= saved.depth {
-                let score = saved.score();
+                let score = saved.moves.get_score(opponent);
                 if let ProbeResult::BetaPrune { .. } = window.probe(score) {
-                    let result = TTableSample::Score(saved.score());
+                    let result = TTableSample::Score(score);
                     self.table.promote(&(Lower, *board));
                     return result;
                 }

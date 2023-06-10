@@ -109,10 +109,42 @@ impl BestMoves {
         }
     }
 
-    pub fn score(&self) -> Score {
+    pub fn best_score(&self) -> Score {
         match self {
             Self::None(score) => *score,
             Self::Best1(b1, ..) | Self::Best2(b1, ..) | Self::Best3(b1, ..) => b1.score,
+        }
+    }
+
+    pub fn avg_score(&self) -> Score {
+        match self {
+            Self::None(score) => *score,
+            Self::Best1(b1) => b1.score,
+            Self::Best2(b1, b2) => (b1.score + b2.score) / 2,
+            Self::Best3(b1, b2, b3) => (b1.score + b2.score + b3.score) / 3,
+        }
+    }
+
+    pub fn worst_score(&self) -> Score {
+        match self {
+            Self::None(score) => *score,
+            Self::Best1(b1) => b1.score,
+            Self::Best2(_, b2) => b2.score,
+            Self::Best3(_, _, b3) => b3.score,
+        }
+    }
+
+    pub fn get_score(&self, opponent: bool) -> Score {
+        const CONTEMPT: bool = true;
+
+        if opponent {
+            if CONTEMPT {
+                self.worst_score()
+            } else {
+                self.avg_score()
+            }
+        } else {
+            self.best_score()
         }
     }
 }
