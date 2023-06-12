@@ -40,40 +40,37 @@ impl BestMoves {
         if !self.contains(new.mv) {
             *self = match *self {
                 Self::None(score) => {
-                    if new.score > score {
-                        Self::Best1(new)
-                    } else {
+                    if new.score <= score {
                         *self
+                    } else {
+                        Self::Best1(new)
                     }
                 }
                 Self::Best1(b1) => {
-                    /****/
-                    if new.score > b1.score {
-                        Self::Best2(new, b1)
-                    } else {
+                    if new.score <= b1.score {
                         Self::Best2(b1, new)
+                    } else {
+                        Self::Best2(new, b1)
                     }
                 }
                 Self::Best2(b1, b2) => {
-                    /****/
-                    if new.score > b1.score {
-                        Self::Best3(new, b1, b2)
-                    } else if new.score > b2.score {
+                    if new.score <= b2.score {
+                        Self::Best3(b1, b2, new)
+                    } else if new.score <= b1.score {
                         Self::Best3(b1, new, b2)
                     } else {
-                        Self::Best3(b1, b2, new)
+                        Self::Best3(new, b1, b2)
                     }
                 }
                 Self::Best3(b1, b2, b3) => {
-                    /****/
-                    if new.score > b1.score {
-                        Self::Best3(new, b1, b2)
-                    } else if new.score > b2.score {
-                        Self::Best3(b1, new, b2)
-                    } else if new.score > b3.score {
-                        Self::Best3(b1, b2, new)
-                    } else {
+                    if new.score <= b3.score {
                         *self
+                    } else if new.score <= b2.score {
+                        Self::Best3(b1, b2, new)
+                    } else if new.score <= b1.score {
+                        Self::Best3(b1, new, b2)
+                    } else {
+                        Self::Best3(new, b1, b2)
                     }
                 }
             };
