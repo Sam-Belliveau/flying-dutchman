@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use chess::{Board, ChessMove, EMPTY};
 
-use crate::evaluate::{evaluate, score_mark, Score};
+use crate::evaluate::{evaluate, score_mark, Score, DRAW, MATE};
 use crate::transposition::best_moves::{BestMoves, RatedMove};
 use crate::transposition::pv_line::PVLine;
 use crate::transposition::table::{TTable, TTableSample, TTableType::*};
@@ -135,10 +135,23 @@ impl Engine {
             }
         }
 
-        let entry = TTableEntry::new(depth, moves);
-        self.table.update(window.table_type(&moves), board, entry);
+        if moves.is_some() {
+            let entry = TTableEntry::new(depth, moves);
+            self.table.update(window.table_type(&moves), board, entry);
 
-        Self::wrap(moves.get_score(opponent))
+            Self::wrap(moves.get_score(opponent))
+        } else {
+            let eval = if *board.checkers() == EMPTY {
+                -DRAW
+            } else {
+                -MATE
+            };
+
+            let entry = TTableEntry::edge(eval);
+            self.table.update(Exact, board, entry);
+
+            Self::wrap(eval)
+        }
     }
 
     pub fn min_search(&mut self, board: &Board) -> TTableEntry {

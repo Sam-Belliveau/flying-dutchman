@@ -1,6 +1,6 @@
 use crate::{
-    evaluate::{Score, MATE_CUTOFF},
-    search::Depth,
+    evaluate::{Score},
+    search::{Depth, DEPTH_EDGE, DEPTH_LEAF},
 };
 
 use super::best_moves::BestMoves;
@@ -21,13 +21,20 @@ impl TTableEntry {
 
     pub fn leaf(score: Score) -> TTableEntry {
         TTableEntry {
-            depth: 0,
+            depth: DEPTH_LEAF,
+            moves: BestMoves::None(score),
+        }
+    }
+
+    pub fn edge(score: Score) -> TTableEntry {
+        TTableEntry {
+            depth: DEPTH_EDGE,
             moves: BestMoves::None(score),
         }
     }
 
     pub fn is_edge(&self) -> bool {
-        self.moves.best_score().abs() >= MATE_CUTOFF && self.depth < 1
+        self.depth >= DEPTH_EDGE
     }
 
     pub fn update(&mut self, result: &TTableEntry) {
