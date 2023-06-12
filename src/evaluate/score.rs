@@ -5,7 +5,7 @@ pub type Score = i64;
 // making it easier to divide and work with.
 pub const CENTIPAWN: Score = 720720;
 
-pub const MATE: Score = Score::MAX / 2;
+pub const MATE: Score = Score::MAX / 16;
 pub const MATE_MOVE: Score = CENTIPAWN;
 pub const MATE_CUTOFF: Score = MATE - 1024 * MATE_MOVE;
 
