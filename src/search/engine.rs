@@ -198,10 +198,6 @@ impl Engine {
         let previous = self.min_search(board);
         let depth = previous.depth + 1;
 
-        // if depth > 6 {
-        //     return Err(());
-        // }
-
         self.ab_search(*board, depth, AlphaBeta::new(), false, deadline)
     }
 
