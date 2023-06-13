@@ -117,10 +117,6 @@ impl Engine {
         for movement in OrderedMoveGen::full_search(&board, pv) {
             let next = board.make_move_new(movement);
 
-            if self.prev_boards.contains(&next) {
-                continue;
-            }
-
             match {
                 if moves.is_some() {
                     self.ab_search(
