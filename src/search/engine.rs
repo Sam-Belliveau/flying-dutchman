@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::time::Instant;
 
 use chess::{Board, ChessMove, EMPTY};
@@ -17,6 +18,7 @@ const DEFAULT_TABLE_SIZE: usize = 4000 * 1000 * 1000;
 
 pub struct Engine {
     pub table: TTable,
+    prev_boards: HashSet<Board>,
     nodes: usize,
 }
 
@@ -24,8 +26,13 @@ impl Engine {
     pub fn new() -> Engine {
         Engine {
             table: TTable::new(DEFAULT_TABLE_SIZE),
+            prev_boards: HashSet::new(),
             nodes: 0,
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.prev_boards.clear();
     }
 
     fn wrap(score: Score) -> Result<Score, ()> {
@@ -108,9 +115,13 @@ impl Engine {
 
         let mut moves = BestMoves::new();
         for movement in OrderedMoveGen::full_search(&board, pv) {
-            match {
-                let next = board.make_move_new(movement);
+            let next = board.make_move_new(movement);
 
+            if self.prev_boards.contains(&next) {
+                continue;
+            }
+
+            match {
                 if moves.is_some() {
                     self.ab_search(
                         next,
@@ -195,6 +206,7 @@ impl Engine {
         board: &Board,
         deadline: &Deadline,
     ) -> Result<Score, ()> {
+        self.prev_boards.insert(*board);
         let previous = self.min_search(board);
         let depth = previous.depth + 1;
 

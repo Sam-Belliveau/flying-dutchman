@@ -35,7 +35,9 @@ pub fn uci_loop() {
                     println!("id author Sam Belliveau");
                     println!("uciok");
                 }
-                Ok(NewGame) => {}
+                Ok(NewGame) => {
+                    thread.reset()
+                }
                 Ok(IsReady) => {
                     // Respond to the isready command.
                     println!("readyok");

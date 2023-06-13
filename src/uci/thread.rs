@@ -26,6 +26,11 @@ impl UCIThread {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.stop();
+        self.engine.lock().unwrap().reset();
+    }
+
     pub fn search_thread(
         engine: Arc<Mutex<Engine>>,
         board: Board,
