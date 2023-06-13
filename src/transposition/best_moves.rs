@@ -137,10 +137,7 @@ impl BestMoves {
 
 impl BestMoves {
     pub fn is_some(&self) -> bool {
-        match self {
-            Self::Static(..) => false,
-            _ => true,
-        }
+        !matches!(self, Self::Static(..))
     }
 }
 
