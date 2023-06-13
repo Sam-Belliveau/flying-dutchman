@@ -16,7 +16,7 @@ impl RatedMove {
 
 #[derive(Clone, Copy, Debug)]
 pub enum BestMoves {
-    None(Score),
+    Static(Score),
     Best1(RatedMove),
     Best2(RatedMove, RatedMove),
     Best3(RatedMove, RatedMove, RatedMove),
@@ -24,12 +24,12 @@ pub enum BestMoves {
 
 impl BestMoves {
     pub fn new() -> Self {
-        Self::None(-MATE)
+        Self::Static(-MATE)
     }
 
     pub fn contains(&self, mv: ChessMove) -> bool {
         match self {
-            BestMoves::None(..) => false,
+            BestMoves::Static(..) => false,
             BestMoves::Best1(b1) => mv == b1.mv,
             BestMoves::Best2(b1, b2) => mv == b1.mv || mv == b2.mv,
             BestMoves::Best3(b1, b2, b3) => mv == b1.mv || mv == b2.mv || mv == b3.mv,
@@ -39,7 +39,7 @@ impl BestMoves {
     pub fn push(&mut self, new: RatedMove) {
         if !self.contains(new.mv) {
             *self = match *self {
-                Self::None(score) => {
+                Self::Static(score) => {
                     if new.score <= score {
                         *self
                     } else {
@@ -81,7 +81,7 @@ impl BestMoves {
 
     pub fn pop(&mut self) -> Option<ChessMove> {
         match *self {
-            BestMoves::None(..) => None,
+            BestMoves::Static(..) => None,
             BestMoves::Best1(best) => {
                 *self = BestMoves::new();
                 Some(best.mv)
@@ -99,7 +99,7 @@ impl BestMoves {
 
     pub fn peek(&self) -> Option<ChessMove> {
         match *self {
-            BestMoves::None(..) => None,
+            BestMoves::Static(..) => None,
             BestMoves::Best1(best, ..) => Some(best.mv),
             BestMoves::Best2(best, ..) => Some(best.mv),
             BestMoves::Best3(best, ..) => Some(best.mv),
@@ -108,26 +108,17 @@ impl BestMoves {
 
     pub fn best_score(&self) -> Score {
         match self {
-            Self::None(score) => *score,
+            Self::Static(score) => *score,
             Self::Best1(b1, ..) | Self::Best2(b1, ..) | Self::Best3(b1, ..) => b1.score,
         }
     }
 
     pub fn avg_score(&self) -> Score {
         match self {
-            Self::None(score) => *score,
+            Self::Static(score) => *score,
             Self::Best1(b1) => b1.score,
-            Self::Best2(b1, b2) => (b1.score + b2.score) / 2,
-            Self::Best3(b1, b2, b3) => (b1.score + b2.score + b3.score) / 3,
-        }
-    }
-
-    pub fn worst_score(&self) -> Score {
-        match self {
-            Self::None(score) => *score,
-            Self::Best1(b1) => b1.score,
-            Self::Best2(_, b2) => b2.score,
-            Self::Best3(_, _, b3) => b3.score,
+            Self::Best2(b1, b2) => (b1.score + 2 * b2.score) / 3,
+            Self::Best3(b1, b2, b3) => (b1.score + 2 * b2.score + 3 * b3.score) / 6,
         }
     }
 
@@ -136,17 +127,8 @@ impl BestMoves {
         // that the opponent will play the best move
         const NORMAL: bool = false;
 
-        // If normal is set to false, then this boolean
-        // controls how bad we assume the other player
-        // is going to be.
-        const STUPID: bool = false;
-
         if !NORMAL && opponent {
-            if STUPID {
-                self.worst_score()
-            } else {
-                self.avg_score()
-            }
+            self.avg_score()
         } else {
             self.best_score()
         }
@@ -156,7 +138,7 @@ impl BestMoves {
 impl BestMoves {
     pub fn is_some(&self) -> bool {
         match self {
-            Self::None(..) => false,
+            Self::Static(..) => false,
             _ => true,
         }
     }

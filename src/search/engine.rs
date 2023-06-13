@@ -32,13 +32,19 @@ impl Engine {
         Ok(score_mark(score))
     }
 
-    pub fn ab_qsearch(&mut self, board: Board, mut window: AlphaBeta) -> Result<Score, ()> {
-        match self
+    pub fn ab_qsearch(
+        &mut self,
+        board: Board,
+        mut window: AlphaBeta,
+        opponent: bool,
+    ) -> Result<Score, ()> {
+        let pv = match self
             .table
             .sample::<true>(&board, &window, false, Depth::MIN)
         {
             TTableSample::Score(score) => return Self::wrap(score),
-            _ => {}
+            TTableSample::Moves(pv) => pv,
+            _ => BestMoves::new(),
         };
 
         let start_alpha = window.alpha;
@@ -50,24 +56,27 @@ impl Engine {
                     return Self::wrap(score);
                 }
 
-                OrderedMoveGen::quiescence_search(&board)
+                OrderedMoveGen::quiescence_search(&board, pv)
             } else {
-                OrderedMoveGen::full_search(&board, BestMoves::new())
+                OrderedMoveGen::full_search(&board, pv)
             }
         };
 
+        let mut moves = BestMoves::Static(window.alpha);
         for movement in movegen {
             let new_board = board.make_move_new(movement);
-            let score = -self.ab_qsearch(new_board, -window)?;
+            let eval = -self.ab_qsearch(new_board, -window, !opponent)?;
 
+            moves.push(RatedMove::new(eval, movement));
+            let score = moves.get_score(opponent);
             if let Pruned { .. } = window.negamax(score) {
                 return Self::wrap(score);
             }
         }
 
-        if start_alpha < window.alpha {
-            self.table
-                .update(Exact, board, TTableEntry::leaf(window.alpha));
+        let eval = moves.get_score(opponent);
+        if start_alpha < eval {
+            self.table.update(Exact, board, TTableEntry::leaf(moves));
         }
 
         Self::wrap(window.alpha)
@@ -84,13 +93,13 @@ impl Engine {
         self.nodes += 1;
 
         if depth <= 0 {
-            return self.ab_qsearch(board, AlphaBeta::new());
+            return self.ab_qsearch(board, AlphaBeta::new(), opponent);
         }
 
         let pv = match self.table.sample::<false>(&board, &window, opponent, depth) {
-            TTableSample::Moves(moves) => Some(moves),
+            TTableSample::Moves(moves) => moves,
             TTableSample::Score(score) => return Self::wrap(score),
-            TTableSample::None => None,
+            TTableSample::None => BestMoves::new(),
         };
 
         if deadline.passed() {
@@ -98,40 +107,50 @@ impl Engine {
         }
 
         let mut moves = BestMoves::new();
-        for movement in OrderedMoveGen::full_search(&board, pv.unwrap_or_default()) {
-            let next = board.make_move_new(movement);
+        for movement in OrderedMoveGen::full_search(&board, pv) {
+            match {
+                let next = board.make_move_new(movement);
 
-            let eval = if moves.is_some() {
-                let eval = -self.ab_search(
-                    next,
-                    depth - 1,
-                    -(window.null_window()),
-                    !opponent,
-                    deadline,
-                )?;
-
-                if let Contained { .. } = window.probe(eval) {
-                    eval.max(-self.ab_search(
+                if moves.is_some() {
+                    self.ab_search(
                         next,
                         depth - 1,
-                        -(window.raise_alpha(eval)),
+                        -(window.null_window()),
                         !opponent,
                         deadline,
-                    )?)
+                    )
+                    .map(|eval| -eval)
+                    .and_then(|eval| {
+                        if let Contained { .. } = window.probe(eval) {
+                            self.ab_search(next, depth - 1, -window, !opponent, deadline)
+                                .map(|eval| -eval)
+                        } else {
+                            Ok(eval)
+                        }
+                    })
                 } else {
-                    eval
+                    self.ab_search(next, depth - 1, -window, !opponent, deadline)
+                        .map(|eval| -eval)
                 }
-            } else {
-                -self.ab_search(next, depth - 1, -window, !opponent, deadline)?
-            };
+            } {
+                Ok(eval) => {
+                    moves.push(RatedMove::new(eval, movement));
+                    let score = moves.get_score(opponent);
+                    if let Pruned { .. } = window.negamax(score) {
+                        let entry = TTableEntry::new(depth, moves);
+                        self.table.update(Lower, board, entry);
 
-            moves.push(RatedMove::new(eval, movement));
-            let score = moves.get_score(opponent);
-            if let Pruned { .. } = window.negamax(score) {
-                let entry = TTableEntry::new(depth, moves);
-                self.table.update(Lower, board, entry);
+                        return Self::wrap(score);
+                    }
+                }
+                Err(()) => {
+                    // If we receive Err(()), it means that the deadline has struck
+                    // and we are unwinding the call stack. We need to save some work
+                    // if it has been pushed out of the transposition table.
+                    self.table.update(Exact, board, TTableEntry::leaf(pv));
 
-                return Self::wrap(score);
+                    return Err(());
+                }
             }
         }
 
@@ -147,7 +166,7 @@ impl Engine {
                 -MATE
             };
 
-            let entry = TTableEntry::edge(eval);
+            let entry = TTableEntry::edge(BestMoves::Static(eval));
             self.table.update(Exact, board, entry);
 
             Self::wrap(eval)
@@ -178,6 +197,10 @@ impl Engine {
     ) -> Result<Score, ()> {
         let previous = self.min_search(board);
         let depth = previous.depth + 1;
+
+        // if depth > 6 {
+        //     return Err(());
+        // }
 
         self.ab_search(*board, depth, AlphaBeta::new(), false, deadline)
     }

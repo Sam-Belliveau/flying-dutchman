@@ -19,17 +19,17 @@ impl TTableEntry {
         }
     }
 
-    pub fn leaf(score: Score) -> TTableEntry {
+    pub fn leaf(score: BestMoves) -> TTableEntry {
         TTableEntry {
             depth: DEPTH_LEAF,
-            moves: BestMoves::None(score),
+            moves: score,
         }
     }
 
-    pub fn edge(score: Score) -> TTableEntry {
+    pub fn edge(score: BestMoves) -> TTableEntry {
         TTableEntry {
             depth: DEPTH_EDGE,
-            moves: BestMoves::None(score),
+            moves: score,
         }
     }
 

@@ -72,13 +72,6 @@ impl AlphaBeta {
             beta: self.alpha + 1,
         }
     }
-
-    pub fn raise_alpha(&self, score: Score) -> AlphaBeta {
-        AlphaBeta {
-            alpha: self.alpha.max(score),
-            beta: self.beta,
-        }
-    }
 }
 
 impl ops::Neg for AlphaBeta {

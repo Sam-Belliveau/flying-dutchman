@@ -33,10 +33,10 @@ impl OrderedMoveGen {
         .initialize()
     }
 
-    pub fn quiescence_search(board: &Board) -> OrderedMoveGen {
+    pub fn quiescence_search(board: &Board, pv: BestMoves) -> OrderedMoveGen {
         OrderedMoveGen {
-            pv: BestMoves::new(),
-            pv_iter: BestMoves::new(),
+            pv: pv,
+            pv_iter: pv,
             masks: [
                 *board.pieces(chess::Piece::Queen),
                 *board.pieces(chess::Piece::Rook),
