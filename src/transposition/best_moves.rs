@@ -20,6 +20,7 @@ pub enum BestMoves {
     Best1(RatedMove),
     Best2(RatedMove, RatedMove),
     Best3(RatedMove, RatedMove, RatedMove),
+    Best4(RatedMove, RatedMove, RatedMove, RatedMove),
 }
 
 impl BestMoves {
@@ -33,6 +34,9 @@ impl BestMoves {
             BestMoves::Best1(b1) => mv == b1.mv,
             BestMoves::Best2(b1, b2) => mv == b1.mv || mv == b2.mv,
             BestMoves::Best3(b1, b2, b3) => mv == b1.mv || mv == b2.mv || mv == b3.mv,
+            BestMoves::Best4(b1, b2, b3, b4) => {
+                mv == b1.mv || mv == b2.mv || mv == b3.mv || mv == b4.mv
+            }
         }
     }
 
@@ -64,13 +68,26 @@ impl BestMoves {
                 }
                 Self::Best3(b1, b2, b3) => {
                     if new.score <= b3.score {
-                        *self
+                        Self::Best4(b1, b2, b3, new)
                     } else if new.score <= b2.score {
-                        Self::Best3(b1, b2, new)
+                        Self::Best4(b1, b2, new, b3)
                     } else if new.score <= b1.score {
-                        Self::Best3(b1, new, b2)
+                        Self::Best4(b1, new, b2, b3)
                     } else {
-                        Self::Best3(new, b1, b2)
+                        Self::Best4(new, b1, b2, b3)
+                    }
+                }
+                Self::Best4(b1, b2, b3, b4) => {
+                    if new.score <= b4.score {
+                        *self
+                    } else if new.score <= b3.score {
+                        Self::Best4(b1, b2, b3, new)
+                    } else if new.score <= b2.score {
+                        Self::Best4(b1, b2, new, b3)
+                    } else if new.score <= b1.score {
+                        Self::Best4(b1, new, b2, b3)
+                    } else {
+                        Self::Best4(new, b1, b2, b3)
                     }
                 }
             };
@@ -94,6 +111,10 @@ impl BestMoves {
                 *self = BestMoves::Best2(n1, n2);
                 Some(best.mv)
             }
+            BestMoves::Best4(best, n1, n2, n3) => {
+                *self = BestMoves::Best3(n1, n2, n3);
+                Some(best.mv)
+            }
         }
     }
 
@@ -103,21 +124,27 @@ impl BestMoves {
             BestMoves::Best1(best, ..) => Some(best.mv),
             BestMoves::Best2(best, ..) => Some(best.mv),
             BestMoves::Best3(best, ..) => Some(best.mv),
+            BestMoves::Best4(best, ..) => Some(best.mv),
         }
     }
 
     pub fn best_score(&self) -> Score {
         match self {
             Self::Static(score) => *score,
-            Self::Best1(b1, ..) | Self::Best2(b1, ..) | Self::Best3(b1, ..) => b1.score,
+            Self::Best1(b1, ..)
+            | Self::Best2(b1, ..)
+            | Self::Best3(b1, ..)
+            | Self::Best4(b1, ..) => b1.score,
         }
     }
+
     pub fn avg_score(&self) -> Score {
         match self {
             Self::Static(score) => *score,
             Self::Best1(b1) => b1.score,
             Self::Best2(b1, b2) => (b1.score + b2.score) / 2,
             Self::Best3(b1, b2, b3) => (b1.score + b2.score + b3.score) / 3,
+            Self::Best4(b1, b2, b3, b4) => (b1.score + b2.score + b3.score + b4.score) / 4,
         }
     }
 
@@ -127,6 +154,7 @@ impl BestMoves {
             Self::Best1(b1) => b1.score,
             Self::Best2(_, b2) => b2.score,
             Self::Best3(_, _, b3) => b3.score,
+            Self::Best4(_, _, _, b4) => b4.score,
         }
     }
 
