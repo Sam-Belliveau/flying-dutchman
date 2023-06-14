@@ -47,6 +47,16 @@ impl TTableEntry {
         }
     }
 
+    pub fn update_upper(&mut self, result: &TTableEntry) {
+        if (self.depth.cmp(&result.depth))
+            .then(result.score().cmp(&self.score()))
+            .is_lt()
+        {
+            self.depth = result.depth;
+            self.moves = result.moves;
+        }
+    }
+
     pub fn score(&self) -> Score {
         self.moves.best_score()
     }

@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::mem::replace;
 use std::time::Instant;
 
 use chess::{Board, ChessMove, EMPTY};
@@ -6,7 +7,10 @@ use chess::{Board, ChessMove, EMPTY};
 use crate::evaluate::{evaluate, score_mark, Score, DRAW, MATE};
 use crate::transposition::best_moves::{BestMoves, RatedMove};
 use crate::transposition::pv_line::PVLine;
-use crate::transposition::table::{TTable, TTableSample, TTableType::*};
+use crate::transposition::table::{
+    TTable, TTableSample,
+    TTableType::{self, *},
+};
 use crate::transposition::table_entry::TTableEntry;
 
 use super::alpha_beta::{AlphaBeta, NegaMaxResult::*, ProbeResult::*};
@@ -18,6 +22,7 @@ const DEFAULT_TABLE_SIZE: usize = 4000 * 1000 * 1000;
 
 pub struct Engine {
     pub table: TTable,
+    pv_cache: Vec<(TTableType, Board, TTableEntry)>,
     prev_boards: HashSet<Board>,
     nodes: usize,
 }
@@ -26,6 +31,7 @@ impl Engine {
     pub fn new() -> Engine {
         Engine {
             table: TTable::new(DEFAULT_TABLE_SIZE),
+            pv_cache: Vec::new(),
             prev_boards: HashSet::new(),
             nodes: 0,
         }
@@ -54,25 +60,25 @@ impl Engine {
             _ => BestMoves::new(),
         };
 
-        let start_alpha = window.alpha;
-
-        let movegen = {
+        let (mut moves, movegen) = {
             if *board.checkers() == EMPTY {
                 let score = evaluate(&board);
                 if let Pruned { .. } = window.negamax(score) {
                     return Self::wrap(score);
                 }
 
-                OrderedMoveGen::quiescence_search(&board, pv)
+                (
+                    BestMoves::Static(score),
+                    OrderedMoveGen::quiescence_search(&board, pv),
+                )
             } else {
-                OrderedMoveGen::full_search(&board, pv)
+                (BestMoves::new(), OrderedMoveGen::full_search(&board, pv))
             }
         };
 
-        let mut moves = BestMoves::Static(window.alpha);
         for movement in movegen {
-            let new_board = board.make_move_new(movement);
-            let eval = -self.ab_qsearch(new_board, -window, !opponent)?;
+            let next = board.make_move_new(movement);
+            let eval = -self.ab_qsearch(next, -window, !opponent)?;
 
             moves.push(RatedMove::new(eval, movement));
             let score = moves.get_score(opponent);
@@ -81,15 +87,14 @@ impl Engine {
             }
         }
 
-        let eval = moves.get_score(opponent);
-        if start_alpha < eval {
+        if window.table_type(&moves) == Exact {
             self.table.update(Exact, board, TTableEntry::leaf(moves));
         }
 
-        Self::wrap(window.alpha)
+        Self::wrap(moves.get_score(opponent))
     }
 
-    fn ab_search(
+    fn ab_search<const PV: bool>(
         &mut self,
         board: Board,
         depth: Depth,
@@ -100,7 +105,7 @@ impl Engine {
         self.nodes += 1;
 
         if depth <= 0 {
-            return self.ab_qsearch(board, AlphaBeta::new(), opponent);
+            return self.ab_qsearch(board, window, opponent);
         }
 
         let pv = match self.table.sample::<false>(&board, &window, opponent, depth) {
@@ -116,54 +121,48 @@ impl Engine {
         let mut moves = BestMoves::new();
         for movement in OrderedMoveGen::full_search(&board, pv) {
             let next = board.make_move_new(movement);
+            let eval = if moves.is_some() {
+                let eval = -self.ab_search::<false>(
+                    next,
+                    depth - 1,
+                    -(window.null_window()),
+                    !opponent,
+                    deadline,
+                )?;
 
-            match {
-                if moves.is_some() {
-                    self.ab_search(
-                        next,
-                        depth - 1,
-                        -(window.null_window()),
-                        !opponent,
-                        deadline,
-                    )
-                    .map(|eval| -eval)
-                    .and_then(|eval| {
-                        if let Contained { .. } = window.probe(eval) {
-                            self.ab_search(next, depth - 1, -window, !opponent, deadline)
-                                .map(|eval| -eval)
-                        } else {
-                            Ok(eval)
-                        }
-                    })
+                if let Contained { .. } = window.probe(eval) {
+                    -self.ab_search::<false>(next, depth - 1, -window, !opponent, deadline)?
                 } else {
-                    self.ab_search(next, depth - 1, -window, !opponent, deadline)
-                        .map(|eval| -eval)
+                    eval
                 }
-            } {
-                Ok(eval) => {
-                    moves.push(RatedMove::new(eval, movement));
-                    let score = moves.get_score(opponent);
-                    if let Pruned { .. } = window.negamax(score) {
-                        let entry = TTableEntry::new(depth, moves);
-                        self.table.update(Lower, board, entry);
+            } else {
+                -self.ab_search::<PV>(next, depth - 1, -window, !opponent, deadline)?
+            };
 
-                        return Self::wrap(score);
-                    }
-                }
-                Err(()) => {
-                    // If we receive Err(()), it means that the deadline has struck
-                    // and we are unwinding the call stack. We need to save some work
-                    // if it has been pushed out of the transposition table.
-                    self.table.update(Exact, board, TTableEntry::leaf(pv));
+            moves.push(RatedMove::new(eval, movement));
+            let score = moves.get_score(opponent);
+            if let Pruned { .. } = window.negamax(score) {
+                let entry = TTableEntry::new(depth, moves);
 
-                    return Err(());
+                if PV {
+                    self.pv_cache.push((Lower, board, entry.clone()));
                 }
+
+                self.table.update(Lower, board, entry);
+
+                return Self::wrap(score);
             }
         }
 
         if moves.is_some() {
             let entry = TTableEntry::new(depth, moves);
-            self.table.update(window.table_type(&moves), board, entry);
+            let ttype = window.table_type(&moves);
+
+            if PV {
+                self.pv_cache.push((ttype, board, entry.clone()));
+            }
+
+            self.table.update(ttype, board, entry);
 
             Self::wrap(moves.get_score(opponent))
         } else {
@@ -174,6 +173,11 @@ impl Engine {
             };
 
             let entry = TTableEntry::edge(BestMoves::Static(eval));
+
+            if PV {
+                self.pv_cache.push((Exact, board, entry.clone()));
+            }
+
             self.table.update(Exact, board, entry);
 
             Self::wrap(eval)
@@ -187,7 +191,7 @@ impl Engine {
             }
         }
 
-        self.ab_search(*board, 1, AlphaBeta::new(), false, &Deadline::none())
+        self.ab_search::<false>(*board, 1, AlphaBeta::new(), false, &Deadline::none())
             .expect("Expected Complete Search");
 
         return self.table.get(Exact, *board).unwrap().clone();
@@ -206,7 +210,27 @@ impl Engine {
         let previous = self.min_search(board);
         let depth = previous.depth + 1;
 
-        self.ab_search(*board, depth, AlphaBeta::new(), false, deadline)
+        let old_pv = replace(&mut self.pv_cache, Vec::new());
+
+        if let Ok(score) = self.ab_search::<true>(*board, depth, AlphaBeta::new(), false, deadline)
+        {
+            for (s, b, e) in &self.pv_cache {
+                self.table.update(*s, *b, e.clone());
+            }
+
+            Ok(score)
+        } else {
+            for (s, b, e) in replace(&mut self.pv_cache, old_pv) {
+                self.table.update(s, b, e);
+            }
+
+            for (s, b, e) in &self.pv_cache {
+                self.table.update(*s, *b, e.clone());
+            }
+
+            self.table.update(Exact, *board, previous);
+            Err(())
+        }
     }
 
     pub fn best_move(&mut self, board: &Board) -> Option<ChessMove> {

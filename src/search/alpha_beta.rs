@@ -59,8 +59,6 @@ impl AlphaBeta {
         let score = moves.best_score();
         if score < self.alpha {
             TTableType::Upper
-        } else if score > self.beta {
-            TTableType::Lower
         } else {
             TTableType::Exact
         }

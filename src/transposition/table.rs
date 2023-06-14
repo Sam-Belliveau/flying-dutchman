@@ -62,7 +62,12 @@ impl TTable {
         let entry = self
             .table
             .get_or_insert_mut((ttype, board), || result.clone());
-        entry.update(&result);
+
+        if ttype == Upper {
+            entry.update_upper(&result);
+        } else {
+            entry.update(&result);
+        }
     }
 
     pub fn sample<const LEAF: bool>(
