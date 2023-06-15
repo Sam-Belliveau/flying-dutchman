@@ -1,6 +1,6 @@
 use crate::{
-    evaluate::{Score},
-    search::{Depth, DEPTH_EDGE, DEPTH_LEAF},
+    evaluate::Score,
+    search::{Depth, DEPTH_EDGE},
 };
 
 use super::best_moves::BestMoves;
@@ -16,13 +16,6 @@ impl TTableEntry {
         TTableEntry {
             depth: depth.max(0),
             moves,
-        }
-    }
-
-    pub fn leaf(score: BestMoves) -> TTableEntry {
-        TTableEntry {
-            depth: DEPTH_LEAF,
-            moves: score,
         }
     }
 

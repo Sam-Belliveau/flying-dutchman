@@ -45,21 +45,7 @@ impl Engine {
         Ok(score_mark(score))
     }
 
-    pub fn ab_qsearch(
-        &mut self,
-        board: Board,
-        mut window: AlphaBeta,
-        opponent: bool,
-    ) -> Result<Score, ()> {
-        let pv = match self
-            .table
-            .sample::<true>(&board, &window, false, Depth::MIN)
-        {
-            TTableSample::Score(score) => return Self::wrap(score),
-            TTableSample::Moves(pv) => pv,
-            _ => BestMoves::new(),
-        };
-
+    pub fn ab_qsearch(board: Board, mut window: AlphaBeta, opponent: bool) -> Result<Score, ()> {
         let (mut moves, movegen) = {
             if *board.checkers() == EMPTY {
                 let score = evaluate(&board);
@@ -69,26 +55,25 @@ impl Engine {
 
                 (
                     BestMoves::Static(score),
-                    OrderedMoveGen::quiescence_search(&board, pv),
+                    OrderedMoveGen::quiescence_search(&board, BestMoves::new()),
                 )
             } else {
-                (BestMoves::new(), OrderedMoveGen::full_search(&board, pv))
+                (
+                    BestMoves::new(),
+                    OrderedMoveGen::full_search(&board, BestMoves::new()),
+                )
             }
         };
 
         for movement in movegen {
-            let next = board.make_move_new(movement);
-            let eval = -self.ab_qsearch(next, -window, !opponent)?;
+            let new_board = board.make_move_new(movement);
+            let eval = -Self::ab_qsearch(new_board, -window, !opponent)?;
 
             moves.push(RatedMove::new(eval, movement));
             let score = moves.get_score(opponent);
             if let Pruned { .. } = window.negamax(score) {
                 return Self::wrap(score);
             }
-        }
-
-        if window.table_type(&moves) == Exact {
-            self.table.update(Exact, board, TTableEntry::leaf(moves));
         }
 
         Self::wrap(moves.get_score(opponent))
@@ -105,7 +90,7 @@ impl Engine {
         self.nodes += 1;
 
         if depth <= 0 {
-            return self.ab_qsearch(board, window, opponent);
+            return Self::ab_qsearch(board, window, opponent);
         }
 
         let pv = match self.table.sample::<false>(&board, &window, opponent, depth) {
@@ -131,7 +116,7 @@ impl Engine {
                 )?;
 
                 if let Contained { .. } = window.probe(eval) {
-                    -self.ab_search::<false>(next, depth - 1, -window, !opponent, deadline)?
+                    -self.ab_search::<PV>(next, depth - 1, -window, !opponent, deadline)?
                 } else {
                     eval
                 }

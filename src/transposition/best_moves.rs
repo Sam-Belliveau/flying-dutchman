@@ -182,7 +182,7 @@ impl BestMoves {
         const NORMAL: bool = false;
 
         if !NORMAL && opponent {
-            let threshold = self.best_score() - 800 * CENTIPAWN;
+            let threshold = self.best_score() - 0 * CENTIPAWN;
             self.min_score(threshold)
         } else {
             self.best_score()
