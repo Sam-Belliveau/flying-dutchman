@@ -108,8 +108,6 @@ impl TTable {
                     self.table.promote(&(Upper, *board));
                     return result;
                 }
-
-                window.lower_beta(score);
             }
         }
 
@@ -125,8 +123,6 @@ impl TTable {
                     self.table.promote(&(Lower, *board));
                     return result;
                 }
-
-                window.raise_alpha(score);
             }
         }
 

@@ -63,13 +63,6 @@ impl AlphaBeta {
             TTableType::Exact
         }
     }
-
-    pub fn lower_beta(&mut self, beta: Score) {
-        self.beta = self.beta.min(beta);
-    }
-    pub fn raise_alpha(&mut self, alpha: Score) {
-        self.alpha = self.alpha.min(alpha);
-    }
 }
 
 impl ops::Neg for AlphaBeta {
