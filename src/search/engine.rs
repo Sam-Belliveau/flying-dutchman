@@ -45,7 +45,9 @@ impl Engine {
         Ok(score_mark(score))
     }
 
-    pub fn ab_qsearch(board: Board, mut window: AlphaBeta, opponent: bool) -> Result<Score, ()> {
+    pub fn ab_qsearch(&mut self, board: Board, mut window: AlphaBeta, opponent: bool) -> Result<Score, ()> {
+        self.nodes += 1;
+
         let (mut moves, movegen) = {
             if *board.checkers() == EMPTY {
                 let score = evaluate(&board);
@@ -67,7 +69,7 @@ impl Engine {
 
         for movement in movegen {
             let new_board = board.make_move_new(movement);
-            let eval = -Self::ab_qsearch(new_board, -window, !opponent)?;
+            let eval = -self.ab_qsearch(new_board, -window, !opponent)?;
 
             moves.push(RatedMove::new(eval, movement));
             let score = moves.get_score(opponent);
@@ -90,10 +92,10 @@ impl Engine {
         self.nodes += 1;
 
         if depth <= 0 {
-            return Self::ab_qsearch(board, AlphaBeta::new(), opponent);
+            return self.ab_qsearch(board, AlphaBeta::new(), opponent);
         }
 
-        let pv = match self.table.sample::<false>(&board, &window, opponent, depth) {
+        let pv = match self.table.sample::<false>(&board, &mut window, opponent, depth) {
             TTableSample::Moves(moves) => moves,
             TTableSample::Score(score) => return Self::wrap(score),
             TTableSample::None => BestMoves::new(),
@@ -180,6 +182,10 @@ impl Engine {
         self.prev_boards.insert(*board);
         let previous = self.min_search(board);
         let depth = previous.depth + 1;
+
+        if depth > 7 {
+            return Err(());
+        }
 
         let old_pv = replace(&mut self.pv_cache, Vec::new());
 

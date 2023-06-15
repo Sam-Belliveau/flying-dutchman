@@ -20,7 +20,8 @@ pub enum BestMoves {
     Best1(RatedMove, Score),
     Best2(RatedMove, RatedMove, Score),
     Best3(RatedMove, RatedMove, RatedMove, Score),
-    Best4(RatedMove, RatedMove, RatedMove, RatedMove),
+    Best4(RatedMove, RatedMove, RatedMove, RatedMove, Score),
+    Best5(RatedMove, RatedMove, RatedMove, RatedMove, RatedMove),
 }
 
 impl BestMoves {
@@ -34,8 +35,11 @@ impl BestMoves {
             BestMoves::Best1(b1, ..) => mv == b1.mv,
             BestMoves::Best2(b1, b2, ..) => mv == b1.mv || mv == b2.mv,
             BestMoves::Best3(b1, b2, b3, ..) => mv == b1.mv || mv == b2.mv || mv == b3.mv,
-            BestMoves::Best4(b1, b2, b3, b4) => {
+            BestMoves::Best4(b1, b2, b3, b4, ..) => {
                 mv == b1.mv || mv == b2.mv || mv == b3.mv || mv == b4.mv
+            }
+            BestMoves::Best5(b1, b2, b3, b4, b5) => {
+                mv == b1.mv || mv == b2.mv || mv == b3.mv || mv == b4.mv || mv == b5.mv
             }
         }
     }
@@ -75,26 +79,43 @@ impl BestMoves {
                 if new.score <= score {
                     *self
                 } else if new.score <= b3.score {
-                    Self::Best4(b1, b2, b3, new)
+                    Self::Best4(b1, b2, b3, new, score)
                 } else if new.score <= b2.score {
-                    Self::Best4(b1, b2, new, b3)
+                    Self::Best4(b1, b2, new, b3, score)
                 } else if new.score <= b1.score {
-                    Self::Best4(b1, new, b2, b3)
+                    Self::Best4(b1, new, b2, b3, score)
                 } else {
-                    Self::Best4(new, b1, b2, b3)
+                    Self::Best4(new, b1, b2, b3, score)
                 }
             }
-            Self::Best4(b1, b2, b3, b4) => {
-                if new.score <= b4.score {
+            Self::Best4(b1, b2, b3, b4, score) => {
+                if new.score <= score {
                     *self
+                } else if new.score <= b4.score {
+                    Self::Best5(b1, b2, b3, b4, new)
                 } else if new.score <= b3.score {
-                    Self::Best4(b1, b2, b3, new)
+                    Self::Best5(b1, b2, b3, new, b4)
                 } else if new.score <= b2.score {
-                    Self::Best4(b1, b2, new, b3)
+                    Self::Best5(b1, b2, new, b3, b4)
                 } else if new.score <= b1.score {
-                    Self::Best4(b1, new, b2, b3)
+                    Self::Best5(b1, new, b2, b3, b4)
                 } else {
-                    Self::Best4(new, b1, b2, b3)
+                    Self::Best5(new, b1, b2, b3, b4)
+                }
+            }
+            Self::Best5(b1, b2, b3, b4, b5) => {
+                if new.score <= b5.score {
+                    *self
+                } else if new.score <= b4.score {
+                    Self::Best5(b1, b2, b3, b4, new)
+                } else if new.score <= b3.score {
+                    Self::Best5(b1, b2, b3, new, b4)
+                } else if new.score <= b2.score {
+                    Self::Best5(b1, b2, new, b3, b4)
+                } else if new.score <= b1.score {
+                    Self::Best5(b1, new, b2, b3, b4)
+                } else {
+                    Self::Best5(new, b1, b2, b3, b4)
                 }
             }
         };
@@ -115,8 +136,12 @@ impl BestMoves {
                 *self = BestMoves::Best2(n1, n2, score);
                 Some(best.mv)
             }
-            BestMoves::Best4(best, n1, n2, n3) => {
-                *self = BestMoves::Best3(n1, n2, n3, -MATE);
+            BestMoves::Best4(best, n1, n2, n3, score) => {
+                *self = BestMoves::Best3(n1, n2, n3, score);
+                Some(best.mv)
+            }
+            BestMoves::Best5(best, n1, n2, n3, n4) => {
+                *self = BestMoves::Best4(n1, n2, n3, n4, -MATE);
                 Some(best.mv)
             }
         }
@@ -129,6 +154,7 @@ impl BestMoves {
             BestMoves::Best2(best, ..) => Some(best.mv),
             BestMoves::Best3(best, ..) => Some(best.mv),
             BestMoves::Best4(best, ..) => Some(best.mv),
+            BestMoves::Best5(best, ..) => Some(best.mv),
         }
     }
 
@@ -139,6 +165,7 @@ impl BestMoves {
             Self::Best2(b1, ..) => b1.score,
             Self::Best3(b1, ..) => b1.score,
             Self::Best4(b1, ..) => b1.score,
+            Self::Best5(b1, ..) => b1.score,
         }
     }
 
@@ -172,8 +199,23 @@ impl BestMoves {
                     b1.score
                 }
             }
-            BestMoves::Best4(b1, b2, b3, b4) => {
-                if b4.score >= threshold {
+            BestMoves::Best4(b1, b2, b3, b4, s) => {
+                if *s >= threshold {
+                    *s
+                } else if b4.score >= threshold {
+                    b4.score
+                } else if b3.score >= threshold {
+                    b3.score
+                } else if b2.score >= threshold {
+                    b2.score
+                } else {
+                    b1.score
+                }
+            }
+            BestMoves::Best5(b1, b2, b3, b4, b5) => {
+                if b5.score >= threshold {
+                    b5.score
+                } else if b4.score >= threshold {
                     b4.score
                 } else if b3.score >= threshold {
                     b3.score
@@ -198,7 +240,7 @@ impl BestMoves {
             }
             BestMoves::Best2(b1, b2, s) => {
                 if *s >= threshold {
-                    (*s + b1.score + b2.score) / 3
+                    (*s + b2.score + b1.score) / 3
                 } else if b2.score >= threshold {
                     (b2.score + b1.score) / 2
                 } else {
@@ -207,7 +249,7 @@ impl BestMoves {
             }
             BestMoves::Best3(b1, b2, b3, s) => {
                 if *s >= threshold {
-                    (*s + b1.score + b2.score + b3.score) / 4
+                    (*s + b3.score + b2.score + b1.score) / 4
                 } else if b3.score >= threshold {
                     (b3.score + b2.score + b1.score) / 3
                 } else if b2.score >= threshold {
@@ -216,8 +258,23 @@ impl BestMoves {
                     b1.score
                 }
             }
-            BestMoves::Best4(b1, b2, b3, b4) => {
-                if b4.score >= threshold {
+            BestMoves::Best4(b1, b2, b3, b4, s) => {
+                if *s >= threshold {
+                    (*s + b4.score + b3.score + b2.score + b1.score) / 5
+                } else if b4.score >= threshold {
+                    (b4.score + b3.score + b2.score + b1.score) / 4
+                } else if b3.score >= threshold {
+                    (b3.score + b2.score + b1.score) / 3
+                } else if b2.score >= threshold {
+                    (b2.score + b1.score) / 2
+                } else {
+                    b1.score
+                }
+            }
+            BestMoves::Best5(b1, b2, b3, b4, b5) => {
+                if b5.score >= threshold {
+                    (b5.score + b4.score + b3.score + b2.score + b1.score) / 5
+                } else if b4.score >= threshold {
                     (b4.score + b3.score + b2.score + b1.score) / 4
                 } else if b3.score >= threshold {
                     (b3.score + b2.score + b1.score) / 3
@@ -235,9 +292,23 @@ impl BestMoves {
         // that the opponent will play the best move
         const NORMAL: bool = false;
 
+        // This controls as to whether or not we believe
+        // the opponent has the possibility of playing a
+        // better move or not.
+        const STUPID: bool = false;
+
+        // This controls how much we believe the opponent
+        // is capable of blundering.
+        const BLUNDER: Score = -300 * CENTIPAWN;
+
         if !NORMAL && opponent {
-            let threshold = self.best_score() - 200 * CENTIPAWN;
-            self.avg_score(threshold)
+            let threshold = self.best_score() + BLUNDER;
+
+            if STUPID {
+                self.min_score(threshold)
+            } else {
+                self.avg_score(threshold)
+            }
         } else {
             self.best_score()
         }

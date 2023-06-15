@@ -73,7 +73,7 @@ impl TTable {
     pub fn sample<const LEAF: bool>(
         &mut self,
         board: &Board,
-        window: &AlphaBeta,
+        window: &mut AlphaBeta,
         opponent: bool,
         depth: Depth,
     ) -> TTableSample {
@@ -108,6 +108,8 @@ impl TTable {
                     self.table.promote(&(Upper, *board));
                     return result;
                 }
+
+                window.lower_beta(score);
             }
         }
 
@@ -123,8 +125,12 @@ impl TTable {
                     self.table.promote(&(Lower, *board));
                     return result;
                 }
+
+                window.raise_alpha(score);
             }
         }
+
+        debug_assert!(window.alpha < window.beta);
 
         if let Some(moves) = pv {
             TTableSample::Moves(moves)
