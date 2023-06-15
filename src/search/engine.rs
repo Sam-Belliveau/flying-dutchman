@@ -90,7 +90,7 @@ impl Engine {
         self.nodes += 1;
 
         if depth <= 0 {
-            return Self::ab_qsearch(board, window, opponent);
+            return Self::ab_qsearch(board, AlphaBeta::new(), opponent);
         }
 
         let pv = match self.table.sample::<false>(&board, &window, opponent, depth) {
