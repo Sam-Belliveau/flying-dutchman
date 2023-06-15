@@ -13,7 +13,7 @@ use crate::transposition::table::{
 };
 use crate::transposition::table_entry::TTableEntry;
 
-use super::alpha_beta::{AlphaBeta, NegaMaxResult::*, ProbeResult::*};
+use super::alpha_beta::{AlphaBeta, NegaMaxResult::*};
 use super::deadline::Deadline;
 use super::movegen::OrderedMoveGen;
 use super::Depth;
@@ -59,7 +59,7 @@ impl Engine {
                 )
             } else {
                 (
-                    BestMoves::new(),
+                    BestMoves::Static(-MATE),
                     OrderedMoveGen::full_search(&board, BestMoves::new()),
                 )
             }
@@ -107,19 +107,7 @@ impl Engine {
         for movement in OrderedMoveGen::full_search(&board, pv) {
             let next = board.make_move_new(movement);
             let eval = if moves.is_some() {
-                let eval = -self.ab_search::<false>(
-                    next,
-                    depth - 1,
-                    -(window.null_window()),
-                    !opponent,
-                    deadline,
-                )?;
-
-                if let Contained { .. } = window.probe(eval) {
-                    -self.ab_search::<PV>(next, depth - 1, -window, !opponent, deadline)?
-                } else {
-                    eval
-                }
+                -self.ab_search::<false>(next, depth - 1, -window, !opponent, deadline)?
             } else {
                 -self.ab_search::<PV>(next, depth - 1, -window, !opponent, deadline)?
             };
@@ -148,7 +136,6 @@ impl Engine {
             }
 
             self.table.update(ttype, board, entry);
-
             Self::wrap(moves.get_score(opponent))
         } else {
             let eval = if *board.checkers() == EMPTY {
@@ -164,7 +151,6 @@ impl Engine {
             }
 
             self.table.update(Exact, board, entry);
-
             Self::wrap(eval)
         }
     }

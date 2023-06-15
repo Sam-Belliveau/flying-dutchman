@@ -17,9 +17,9 @@ impl RatedMove {
 #[derive(Clone, Copy, Debug)]
 pub enum BestMoves {
     Static(Score),
-    Best1(RatedMove, Score),
-    Best2(RatedMove, RatedMove, Score),
-    Best3(RatedMove, RatedMove, RatedMove, Score),
+    Best1(RatedMove),
+    Best2(RatedMove, RatedMove),
+    Best3(RatedMove, RatedMove, RatedMove),
     Best4(RatedMove, RatedMove, RatedMove, RatedMove),
 }
 
@@ -44,37 +44,25 @@ impl BestMoves {
         debug_assert!(!self.contains(new.mv));
 
         *self = match *self {
-            Self::Static(score) => {
-                if new.score <= score {
-                    *self
+            Self::Static(..) => Self::Best1(new),
+            Self::Best1(b1) => {
+                if new.score <= b1.score {
+                    Self::Best2(b1, new)
                 } else {
-                    Self::Best1(new, score)
+                    Self::Best2(new, b1)
                 }
             }
-            Self::Best1(b1, score) => {
-                if new.score <= score {
-                    *self
+            Self::Best2(b1, b2) => {
+                if new.score <= b2.score {
+                    Self::Best3(b1, b2, new)
                 } else if new.score <= b1.score {
-                    Self::Best2(b1, new, score)
+                    Self::Best3(b1, new, b2)
                 } else {
-                    Self::Best2(new, b1, score)
+                    Self::Best3(new, b1, b2)
                 }
             }
-            Self::Best2(b1, b2, score) => {
-                if new.score <= score {
-                    *self
-                } else if new.score <= b2.score {
-                    Self::Best3(b1, b2, new, score)
-                } else if new.score <= b1.score {
-                    Self::Best3(b1, new, b2, score)
-                } else {
-                    Self::Best3(new, b1, b2, score)
-                }
-            }
-            Self::Best3(b1, b2, b3, score) => {
-                if new.score <= score {
-                    *self
-                } else if new.score <= b3.score {
+            Self::Best3(b1, b2, b3) => {
+                if new.score <= b3.score {
                     Self::Best4(b1, b2, b3, new)
                 } else if new.score <= b2.score {
                     Self::Best4(b1, b2, new, b3)
@@ -103,20 +91,20 @@ impl BestMoves {
     pub fn pop(&mut self) -> Option<ChessMove> {
         match *self {
             BestMoves::Static(..) => None,
-            BestMoves::Best1(best, score) => {
-                *self = BestMoves::Static(score);
+            BestMoves::Best1(best) => {
+                *self = BestMoves::new();
                 Some(best.mv)
             }
-            BestMoves::Best2(best, n1, score) => {
-                *self = BestMoves::Best1(n1, score);
+            BestMoves::Best2(best, n1) => {
+                *self = BestMoves::Best1(n1);
                 Some(best.mv)
             }
-            BestMoves::Best3(best, n1, n2, score) => {
-                *self = BestMoves::Best2(n1, n2, score);
+            BestMoves::Best3(best, n1, n2) => {
+                *self = BestMoves::Best2(n1, n2);
                 Some(best.mv)
             }
             BestMoves::Best4(best, n1, n2, n3) => {
-                *self = BestMoves::Best3(n1, n2, n3, -MATE);
+                *self = BestMoves::Best3(n1, n2, n3);
                 Some(best.mv)
             }
         }
@@ -142,18 +130,28 @@ impl BestMoves {
         }
     }
 
+    pub fn avg_score(&self) -> Score {
+        match self {
+            Self::Static(score) => *score,
+            Self::Best1(b1, ..) => b1.score,
+            Self::Best2(b1, b2, ..) => (b1.score + b2.score) / 2,
+            Self::Best3(b1, b2, b3, ..) => (b1.score + b2.score + b3.score) / 3,
+            Self::Best4(b1, b2, b3, b4) => (b1.score + b2.score + b3.score + b4.score) / 4,
+        }
+    }
+
     pub fn min_score(&self, threshold: Score) -> Score {
         match self {
             BestMoves::Static(score) => *score,
-            BestMoves::Best1(b1, ..) => b1.score,
-            BestMoves::Best2(b1, b2, ..) => {
+            BestMoves::Best1(b1) => b1.score,
+            BestMoves::Best2(b1, b2) => {
                 if b2.score >= threshold {
                     b2.score
                 } else {
                     b1.score
                 }
             }
-            BestMoves::Best3(b1, b2, b3, ..) => {
+            BestMoves::Best3(b1, b2, b3) => {
                 if b3.score >= threshold {
                     b3.score
                 } else if b2.score >= threshold {
@@ -182,8 +180,9 @@ impl BestMoves {
         const NORMAL: bool = false;
 
         if !NORMAL && opponent {
-            let threshold = self.best_score() - 0 * CENTIPAWN;
-            self.min_score(threshold)
+            // let threshold = self.best_score() - 1000 * CENTIPAWN;
+            // self.min_score(threshold)
+            self.avg_score()
         } else {
             self.best_score()
         }

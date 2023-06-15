@@ -63,13 +63,6 @@ impl AlphaBeta {
             TTableType::Exact
         }
     }
-
-    pub fn null_window(&self) -> AlphaBeta {
-        AlphaBeta {
-            alpha: self.alpha,
-            beta: self.alpha + 1,
-        }
-    }
 }
 
 impl ops::Neg for AlphaBeta {
