@@ -1,5 +1,5 @@
 use crate::{
-    evaluate::Score,
+    evaluate::{Score, MATE_CUTOFF},
     search::{Depth, DEPTH_EDGE},
 };
 
@@ -27,7 +27,7 @@ impl TTableEntry {
     }
 
     pub fn is_edge(&self) -> bool {
-        self.depth >= DEPTH_EDGE
+        self.depth >= DEPTH_EDGE || self.score().abs() >= MATE_CUTOFF
     }
 
     pub fn update(&mut self, result: &TTableEntry) {

@@ -45,14 +45,7 @@ impl Engine {
         Ok(score_mark(score))
     }
 
-    pub fn ab_qsearch(
-        &mut self,
-        board: Board,
-        mut window: AlphaBeta,
-        opponent: bool,
-    ) -> Result<Score, ()> {
-        self.nodes += 1;
-
+    pub fn ab_qsearch(board: Board, mut window: AlphaBeta, opponent: bool) -> Result<Score, ()> {
         let (mut moves, movegen) = {
             if *board.checkers() == EMPTY {
                 let score = evaluate(&board);
@@ -74,7 +67,7 @@ impl Engine {
 
         for movement in movegen {
             let new_board = board.make_move_new(movement);
-            let eval = -self.ab_qsearch(new_board, -window, !opponent)?;
+            let eval = -Self::ab_qsearch(new_board, -window, !opponent)?;
 
             moves.push(RatedMove::new(eval, movement));
             let score = moves.get_score(opponent);
@@ -97,7 +90,7 @@ impl Engine {
         self.nodes += 1;
 
         if depth <= 0 {
-            return self.ab_qsearch(board, AlphaBeta::new(), opponent);
+            return Self::ab_qsearch(board, AlphaBeta::new(), opponent);
         }
 
         let pv = match self.table.sample(&board, &window, opponent, depth) {
@@ -188,7 +181,7 @@ impl Engine {
         let previous = self.min_search(board);
         let depth = previous.depth + 1;
 
-        if depth > 7 {
+        if depth > 7 || previous.is_edge() {
             return Err(());
         }
 
