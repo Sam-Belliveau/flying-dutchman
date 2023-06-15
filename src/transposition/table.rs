@@ -70,7 +70,7 @@ impl TTable {
         }
     }
 
-    pub fn sample<const LEAF: bool>(
+    pub fn sample(
         &mut self,
         board: &Board,
         window: &mut AlphaBeta,
@@ -80,20 +80,16 @@ impl TTable {
         let mut pv = None;
 
         if let Some(saved) = self.table.peek(&(Exact, *board)) {
-            if !LEAF && saved.moves.is_some() {
+            if saved.moves.is_some() {
                 pv = pv.or(Some(saved.moves));
             }
 
-            if LEAF || depth <= saved.depth {
+            if depth <= saved.depth {
                 let score = saved.moves.get_score(opponent);
                 let result = TTableSample::Score(score);
                 self.table.promote(&(Exact, *board));
                 return result;
             }
-        }
-
-        if LEAF {
-            return TTableSample::None;
         }
 
         if let Some(saved) = self.table.peek(&(Upper, *board)) {
