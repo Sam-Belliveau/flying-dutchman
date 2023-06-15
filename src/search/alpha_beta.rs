@@ -2,7 +2,7 @@ use std::ops;
 
 use crate::{
     evaluate::{Score, MATE},
-    transposition::{best_moves::BestMoves, table::TTableType},
+    transposition::{table::TTableType, best_moves::BestMoves},
 };
 
 pub enum NegaMaxResult {
@@ -62,6 +62,13 @@ impl AlphaBeta {
         } else {
             TTableType::Exact
         }
+    }
+
+    pub fn lower_beta(&mut self, beta: Score) {
+        self.beta = self.beta.min(beta);
+    }
+    pub fn raise_alpha(&mut self, alpha: Score) {
+        self.alpha = self.alpha.min(alpha);
     }
 }
 
