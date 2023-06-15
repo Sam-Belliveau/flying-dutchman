@@ -73,7 +73,7 @@ impl TTable {
     pub fn sample(
         &mut self,
         board: &Board,
-        window: &mut AlphaBeta,
+        window: &AlphaBeta,
         opponent: bool,
         depth: Depth,
     ) -> TTableSample {
