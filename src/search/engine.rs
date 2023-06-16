@@ -88,7 +88,7 @@ impl Engine {
             return Self::ab_qsearch(board, window);
         }
 
-        let pv = match self.table.sample(&board, &window, opponent, depth) {
+        let pv = match self.table.sample(&board, &window, op, depth) {
             TTableSample::Moves(moves) => moves,
             TTableSample::Score(score) => return Self::wrap(score),
             TTableSample::None => BestMoves::new(),
