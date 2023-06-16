@@ -1,9 +1,6 @@
 use std::ops;
 
-use crate::{
-    evaluate::{Score, MATE},
-    transposition::{table::TTableType, best_moves::BestMoves},
-};
+use crate::evaluate::{Score, MATE};
 
 pub enum NegaMaxResult {
     Worse { delta: Score },
@@ -52,15 +49,6 @@ impl AlphaBeta {
             ProbeResult::BetaPrune { beta: self.beta }
         } else {
             ProbeResult::Contained { score }
-        }
-    }
-
-    pub fn table_type(&self, moves: &BestMoves) -> TTableType {
-        let score = moves.best_score();
-        if score < self.alpha {
-            TTableType::Upper
-        } else {
-            TTableType::Exact
         }
     }
 }

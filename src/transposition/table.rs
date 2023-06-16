@@ -1,4 +1,4 @@
-use std::{mem::size_of, num::NonZeroUsize};
+use std::{mem::{size_of, take}, num::NonZeroUsize};
 
 use chess::Board;
 use lru::LruCache;
@@ -40,12 +40,16 @@ pub enum TTableSample {
 
 pub struct TTable {
     table: TTableHashMap,
+    pv_cache: Vec<(TTableType, Board, TTableEntry)>,
+    pv_cache_old: Vec<(TTableType, Board, TTableEntry)>,
 }
 
 impl TTable {
     pub fn new(table_size: usize) -> TTable {
         TTable {
             table: TTableHashMap::new(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap()),
+            pv_cache: Vec::new(),
+            pv_cache_old: Vec::new(),
         }
     }
 
@@ -58,7 +62,11 @@ impl TTable {
         self.table.get(&(ttype, board))
     }
 
-    pub fn update(&mut self, ttype: TTableType, board: Board, result: TTableEntry) {
+    pub fn update<const PV: bool>(&mut self, ttype: TTableType, board: Board, result: TTableEntry) {
+        if PV {
+            self.pv_cache.push((ttype, board, result.clone()));
+        }
+
         let entry = self
             .table
             .get_or_insert_mut((ttype, board), || result.clone());
@@ -80,7 +88,7 @@ impl TTable {
         let mut pv = None;
 
         if let Some(saved) = self.table.peek(&(Exact, *board)) {
-            if saved.moves.is_some() {
+            if !saved.moves.is_none() {
                 pv = pv.or(Some(saved.moves));
             }
 
@@ -93,7 +101,7 @@ impl TTable {
         }
 
         if let Some(saved) = self.table.peek(&(Upper, *board)) {
-            if saved.moves.is_some() {
+            if !saved.moves.is_none() {
                 pv = pv.or(Some(saved.moves));
             }
 
@@ -108,7 +116,7 @@ impl TTable {
         }
 
         if let Some(saved) = self.table.peek(&(Lower, *board)) {
-            if saved.moves.is_some() {
+            if !saved.moves.is_none() {
                 pv = pv.or(Some(saved.moves));
             }
 
@@ -126,6 +134,22 @@ impl TTable {
             TTableSample::Moves(moves)
         } else {
             TTableSample::None
+        }
+    }
+
+    pub fn refresh_pv_line(&mut self, clean: bool) {
+        for (ttype, board, entry) in self.pv_cache_old.clone() {
+            self.update::<false>(ttype, board, entry);
+        }
+
+        for (ttype, board, entry) in self.pv_cache.clone() {
+            self.update::<false>(ttype, board, entry);
+        }
+
+        if clean {
+            self.pv_cache_old = take(&mut self.pv_cache);
+        } else {
+            self.pv_cache.clear();
         }
     }
 

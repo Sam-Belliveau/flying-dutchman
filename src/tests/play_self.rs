@@ -24,7 +24,7 @@ fn print_result(title: &str, result: TTableEntry) {
 
 pub fn play_self() {
     let mut engine = Engine::new();
-    engine.table.set_table_size(2000000000);
+    engine.table.set_table_size(16000000000);
 
     let mut board = Board::default();
 
@@ -42,7 +42,7 @@ pub fn play_self() {
             Color::Black => println!("Black to move:"),
         }
 
-        deadline = Deadline::timeout(Duration::from_millis(1000));
+        deadline = Deadline::timeout(Duration::from_millis(5000));
         print_result("Init   ", engine.min_search(&board));
         let mut rep = 0;
         let mut presult = None;

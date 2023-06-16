@@ -299,7 +299,7 @@ impl BestMoves {
 
         // This controls how much we believe the opponent
         // is capable of blundering.
-        const BLUNDER: Score = -900 * CENTIPAWN;
+        const BLUNDER: Score = -1800 * CENTIPAWN;
 
         if !NORMAL && opponent {
             let threshold = self.best_score() + BLUNDER;
@@ -316,8 +316,8 @@ impl BestMoves {
 }
 
 impl BestMoves {
-    pub fn is_some(&self) -> bool {
-        !(matches!(self, Self::Static(..)))
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::Static(..))
     }
 }
 
