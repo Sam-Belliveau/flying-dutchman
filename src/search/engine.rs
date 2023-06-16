@@ -117,7 +117,7 @@ impl Engine {
 
         if moves.is_none() {
             let check = *board.checkers() != EMPTY;
-            let eval = if check { -DRAW } else { -MATE };
+            let eval = if check { -MATE } else { -DRAW };
 
             let entry = TTableEntry::edge(BestMoves::Static(eval));
             self.table.update::<PV>(Exact, board, entry);
