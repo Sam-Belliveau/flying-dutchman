@@ -19,6 +19,7 @@ const DEFAULT_TABLE_SIZE: usize = 4000 * 1000 * 1000;
 pub struct Engine {
     pub table: TTable,
     prev_boards: HashSet<Board>,
+    depth: Depth,
     nodes: usize,
 }
 
@@ -27,6 +28,7 @@ impl Engine {
         Engine {
             table: TTable::new(DEFAULT_TABLE_SIZE),
             prev_boards: HashSet::new(),
+            depth: 0,
             nodes: 0,
         }
     }
@@ -39,8 +41,8 @@ impl Engine {
         Ok(score_mark(score))
     }
 
-    pub fn ab_qsearch(board: Board, mut window: AlphaBeta, opponent: bool) -> Result<Score, ()> {
-        let (mut moves, movegen) = {
+    pub fn ab_qsearch(board: Board, mut window: AlphaBeta) -> Result<Score, ()> {
+        let (mut best, movegen) = {
             if *board.checkers() == EMPTY {
                 let score = evaluate(&board);
                 if let Pruned { .. } = window.negamax(score) {
@@ -48,29 +50,25 @@ impl Engine {
                 }
 
                 (
-                    BestMoves::Static(score),
+                    score,
                     OrderedMoveGen::quiescence_search(&board, BestMoves::new()),
                 )
             } else {
-                (
-                    BestMoves::Static(-MATE),
-                    OrderedMoveGen::full_search(&board, BestMoves::new()),
-                )
+                (-MATE, OrderedMoveGen::full_search(&board, BestMoves::new()))
             }
         };
 
         for movement in movegen {
             let new_board = board.make_move_new(movement);
-            let eval = -Self::ab_qsearch(new_board, -window, !opponent)?;
+            let eval = -Self::ab_qsearch(new_board, -window)?;
 
-            moves.push(RatedMove::new(eval, movement));
-            let score = moves.get_score(opponent);
-            if let Pruned { .. } = window.negamax(score) {
-                return Self::wrap(score);
+            best = best.max(eval);
+            if let Pruned { .. } = window.negamax(best) {
+                return Self::wrap(best);
             }
         }
 
-        Self::wrap(moves.get_score(opponent))
+        Self::wrap(best)
     }
 
     fn ab_search<const PV: bool>(
@@ -83,8 +81,11 @@ impl Engine {
     ) -> Result<Score, ()> {
         self.nodes += 1;
 
+        let ply = self.depth - depth;
+        let op = opponent && ply <= 2;
+
         if depth <= 0 {
-            return Self::ab_qsearch(board, window, opponent);
+            return Self::ab_qsearch(board, window);
         }
 
         let pv = match self.table.sample(&board, &window, opponent, depth) {
@@ -107,7 +108,7 @@ impl Engine {
             };
 
             moves.push(RatedMove::new(eval, movement));
-            let score = moves.get_score(opponent);
+            let score = moves.get_score(op);
             if let Pruned { .. } = window.negamax(score) {
                 let entry = TTableEntry::new(depth, moves);
                 self.table.update::<PV>(Lower, board, entry);
@@ -117,19 +118,21 @@ impl Engine {
 
         if moves.is_none() {
             let check = *board.checkers() != EMPTY;
-            let eval = if check { -MATE } else { -DRAW };
 
+            let eval = if check { -MATE } else { -DRAW };
             let entry = TTableEntry::edge(BestMoves::Static(eval));
+
             self.table.update::<PV>(Exact, board, entry);
             Self::wrap(eval)
         } else {
+            let eval = moves.get_score(op);
             let entry = TTableEntry::new(depth, moves);
 
-            let exact = window.alpha <= moves.get_score(opponent);
+            let exact = window.alpha <= eval;
             let ttype = if exact { Exact } else { Upper };
 
             self.table.update::<PV>(ttype, board, entry);
-            Self::wrap(moves.get_score(opponent))
+            Self::wrap(eval)
         }
     }
 
@@ -158,6 +161,7 @@ impl Engine {
         self.prev_boards.insert(*board);
         let previous = self.min_search(board);
         let depth = previous.depth + 1;
+        self.depth = depth;
 
         if previous.is_edge() {
             return Err(());
