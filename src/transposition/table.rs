@@ -1,4 +1,7 @@
-use std::{mem::{size_of, take}, num::NonZeroUsize};
+use std::{
+    mem::{size_of, take},
+    num::NonZeroUsize,
+};
 
 use chess::Board;
 use lru::LruCache;
