@@ -2,6 +2,8 @@ use std::ops;
 
 use crate::evaluate::{Score, MATE};
 
+use super::Depth;
+
 pub enum NegaMaxResult {
     Worse,
     Best,
@@ -12,6 +14,7 @@ pub enum NegaMaxResult {
 pub struct AlphaBeta {
     pub alpha: Score,
     pub beta: Score,
+    pub ply: Depth
 }
 
 impl AlphaBeta {
@@ -19,6 +22,7 @@ impl AlphaBeta {
         Self {
             alpha: -MATE,
             beta: MATE,
+            ply: 0,
         }
     }
 
@@ -42,6 +46,7 @@ impl ops::Neg for AlphaBeta {
         Self {
             alpha: -self.beta,
             beta: -self.alpha,
+            ply: self.ply + 1,
         }
     }
 }

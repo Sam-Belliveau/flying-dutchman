@@ -14,7 +14,7 @@ use super::deadline::Deadline;
 use super::movegen::OrderedMoveGen;
 use super::Depth;
 
-const DEFAULT_TABLE_SIZE: usize = 4000 * 1000 * 1000;
+const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
 
 pub struct Engine {
     pub table: TTable,
@@ -63,7 +63,7 @@ impl Engine {
             let eval = -Self::ab_qsearch(new_board, -window)?;
 
             best = best.max(eval);
-            if let Pruned = window.negamax(best) {
+            if let Pruned = window.negamax(eval) {
                 return Self::wrap(best);
             }
         }
@@ -84,8 +84,6 @@ impl Engine {
             return Self::ab_qsearch(board, window);
         }
 
-        let original_alpha = window.alpha;
-
         let pv = match self.table.sample(&board, &window, depth) {
             TTableSample::Moves(moves) => moves,
             TTableSample::Score(score) => return Self::wrap(score),
@@ -95,6 +93,8 @@ impl Engine {
         if deadline.passed() {
             return Err(());
         }
+
+        let original_alpha = window.alpha;
 
         let mut moves = BestMoves::new();
         for movement in OrderedMoveGen::full_search(&board, pv) {
@@ -107,7 +107,7 @@ impl Engine {
 
             moves.push(RatedMove::new(eval, movement));
 
-            let score = moves.best_score();
+            let score = moves.score();
             if let Pruned = window.negamax(score) {
                 let entry = TTableEntry::new(depth, moves);
                 self.table.update::<PV>(Lower, board, entry);
@@ -126,17 +126,15 @@ impl Engine {
         } else {
             let entry = TTableEntry::new(depth, moves);
 
-            let ttype = if window.beta < moves.best_score() {
-                Lower
-            } else if window.alpha <= original_alpha {
-                Upper
-            } else {
+            let ttype = if original_alpha < window.alpha {
                 Exact
+            } else {
+                Upper
             };
 
             self.table.update::<PV>(ttype, board, entry);
 
-            Self::wrap(moves.best_score())
+            Self::wrap(moves.score())
         }
     }
 
@@ -174,8 +172,7 @@ impl Engine {
         match self.min_search(board) {
             TTableEntry::Node(depth, _) => {
                 self.depth = depth + 1;
-                let result =
-                    self.ab_search::<true>(*board, self.depth, AlphaBeta::new(), deadline);
+                let result = self.ab_search::<true>(*board, self.depth, AlphaBeta::new(), deadline);
 
                 if let Ok(score) = result {
                     self.table.refresh_pv_line(true);

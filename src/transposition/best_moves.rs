@@ -98,7 +98,7 @@ impl BestMoves {
         }
     }
 
-    pub fn best_score(&self) -> Score {
+    pub fn score(&self) -> Score {
         match self {
             Self::Empty => -MATE,
             Self::Best1(b1, ..) => b1.score,

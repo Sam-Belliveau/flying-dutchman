@@ -13,6 +13,8 @@ pub enum TTableEntry {
     Edge(Score),
 }
 
+use TTableEntry::*;
+
 impl TTableEntry {
     pub fn new(depth: Depth, moves: BestMoves) -> TTableEntry {
         TTableEntry::Node(depth.max(0), moves)
@@ -23,46 +25,21 @@ impl TTableEntry {
     }
 
     pub fn update(&mut self, result: TTableEntry) {
-        match *self {
-            TTableEntry::Node(depth, ..) => {
-                if let TTableEntry::Node(new_depth, ..) = result {
-                    if depth
-                        .cmp(&new_depth)
-                        .then(self.score().cmp(&result.score()))
-                        .is_lt()
-                    {
-                        *self = result;
-                    }
+        match (*self, result) {
+            (Node(depth, moves), Node(new_depth, new_moves)) => {
+                if depth
+                    .cmp(&new_depth)
+                    .then(moves.score().cmp(&new_moves.score()))
+                    .is_lt()
+                {
+                    *self = result;
                 }
             }
-            TTableEntry::Edge(score) => {
-                if let TTableEntry::Edge(new_score) = result {
-                    if score < new_score {
-                        *self = result;
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn update_upper(&mut self, result: TTableEntry) {
-        match *self {
-            TTableEntry::Node(depth, ..) => {
-                if let TTableEntry::Node(new_depth, ..) = result {
-                    if depth
-                        .cmp(&new_depth)
-                        .then(self.score().cmp(&result.score()))
-                        .is_lt()
-                    {
-                        *self = result
-                    }
-                }
-            }
-            TTableEntry::Edge(score) => {
-                if let TTableEntry::Edge(new_score) = result {
-                    if score > new_score {
-                        *self = result;
-                    }
+            (Node(..), Edge(..)) => { unreachable!("A board that used to have moves is now in check!") }
+            (Edge(..), Node(..)) => {}
+            (Edge(score), Edge(new_score)) => {
+                if score < new_score {
+                    *self = result;
                 }
             }
         }
@@ -70,7 +47,7 @@ impl TTableEntry {
 
     pub fn score(&self) -> Score {
         match self {
-            TTableEntry::Node(_, moves) => moves.best_score(),
+            TTableEntry::Node(_, moves) => moves.score(),
             TTableEntry::Edge(score) => *score,
         }
     }
