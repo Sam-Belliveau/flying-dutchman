@@ -12,9 +12,8 @@ fn print_result(title: &str, result: TTableEntry) {
     println!(
         "{}|   Depth:{:16.3}   |   Move {}   |    Score {}",
         title,
-        result.depth,
+        result.depth(),
         result
-            .moves
             .peek()
             .map_or(String::from("None"), |m| m.to_string()),
         score_to_str(result.score()),

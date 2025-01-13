@@ -28,7 +28,7 @@ pub fn board_information(engine: &mut Engine, board: Board, search_start: Instan
 
     let time_nano = search_start.elapsed().as_nanos() as usize + 1;
 
-    let depth = board_info.depth;
+    let depth = board_info.depth();
     let seldepth = engine.get_pv_line(board).count();
     let multipv = 1;
     let score = score_to_str(board_info.score());
@@ -60,9 +60,9 @@ pub fn board_information(engine: &mut Engine, board: Board, search_start: Instan
 pub fn board_best_move(engine: &mut Engine, board: Board) {
     let board_info = engine.min_search(&board);
 
-    if let Some(bestmove) = board_info.moves.peek() {
+    if let Some(bestmove) = board_info.peek() {
         let score = score_to_str(board_info.score());
-        let depth = board_info.depth;
+        let depth = board_info.depth();
 
         uci_variable!(bestmove);
         uci_token!("info");

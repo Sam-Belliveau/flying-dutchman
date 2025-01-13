@@ -8,10 +8,7 @@ use lru::LruCache;
 
 use crate::{
     evaluate::Score,
-    search::{
-        alpha_beta::{AlphaBeta, ProbeResult},
-        Depth,
-    },
+    search::{alpha_beta::AlphaBeta, Depth},
 };
 
 use super::{best_moves::BestMoves, pv_line::PVLine, table_entry::TTableEntry};
@@ -61,13 +58,23 @@ impl TTable {
             .resize(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap())
     }
 
-    pub fn get(&mut self, ttype: TTableType, board: Board) -> Option<&TTableEntry> {
+    pub fn get(
+        &mut self,
+        ttype: TTableType,
+        board: Board,
+    ) -> Option<&TTableEntry> {
         self.table.get(&(ttype, board))
     }
 
-    pub fn update<const PV: bool>(&mut self, ttype: TTableType, board: Board, result: TTableEntry) {
+    pub fn update<const PV: bool>(
+        &mut self,
+        ttype: TTableType,
+        board: Board,
+        result: TTableEntry,
+    ) {
         if PV {
-            self.pv_cache.push((ttype, board, result.clone()));
+            self.pv_cache
+                .push((ttype, board, result.clone()));
         }
 
         let entry = self
@@ -75,9 +82,9 @@ impl TTable {
             .get_or_insert_mut((ttype, board), || result.clone());
 
         if ttype == Upper {
-            entry.update_upper(&result);
+            entry.update_upper(result);
         } else {
-            entry.update(&result);
+            entry.update(result);
         }
     }
 
@@ -85,18 +92,15 @@ impl TTable {
         &mut self,
         board: &Board,
         window: &AlphaBeta,
-        opponent: bool,
         depth: Depth,
     ) -> TTableSample {
         let mut pv = None;
 
         if let Some(saved) = self.table.peek(&(Exact, *board)) {
-            if !saved.moves.is_none() {
-                pv = pv.or(Some(saved.moves));
-            }
+            pv = pv.or(saved.moves());
 
-            if depth <= saved.depth {
-                let score = saved.moves.get_score(opponent);
+            if depth <= saved.depth() {
+                let score = saved.score();
                 let result = TTableSample::Score(score);
                 self.table.promote(&(Exact, *board));
                 return result;
@@ -104,13 +108,12 @@ impl TTable {
         }
 
         if let Some(saved) = self.table.peek(&(Upper, *board)) {
-            if !saved.moves.is_none() {
-                pv = pv.or(Some(saved.moves));
-            }
+            pv = pv.or(saved.moves());
 
-            if depth <= saved.depth {
-                let score = saved.moves.get_score(opponent);
-                if let ProbeResult::AlphaPrune { .. } = window.probe(score) {
+            if depth <= saved.depth() {
+                let score = saved.score();
+                let probe_score = saved.score();
+                if probe_score <= window.alpha {
                     let result = TTableSample::Score(score);
                     self.table.promote(&(Upper, *board));
                     return result;
@@ -119,13 +122,11 @@ impl TTable {
         }
 
         if let Some(saved) = self.table.peek(&(Lower, *board)) {
-            if !saved.moves.is_none() {
-                pv = pv.or(Some(saved.moves));
-            }
+            pv = pv.or(saved.moves());
 
-            if depth <= saved.depth {
-                let score = saved.moves.get_score(opponent);
-                if let ProbeResult::BetaPrune { .. } = window.probe(score) {
+            if depth <= saved.depth() {
+                let score = saved.score();
+                if window.beta <= score {
                     let result = TTableSample::Score(score);
                     self.table.promote(&(Lower, *board));
                     return result;

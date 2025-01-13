@@ -25,10 +25,10 @@ impl Iterator for PVLine<'_> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(entry) = (self.table.get(&(Exact, self.board)).cloned())
-            .or_else(|| self.table.get(&(Upper, self.board)).cloned())
             .or_else(|| self.table.get(&(Lower, self.board)).cloned())
+            .or_else(|| self.table.get(&(Upper, self.board)).cloned())
         {
-            if let Some(best_move) = entry.moves.peek() {
+            if let Some(best_move) = entry.peek() {
                 if self.passed.insert(self.board) {
                     self.board = self.board.make_move_new(best_move);
 
