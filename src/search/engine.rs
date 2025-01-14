@@ -14,7 +14,7 @@ use super::deadline::Deadline;
 use super::movegen::OrderedMoveGen;
 use super::Depth;
 
-const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
+const DEFAULT_TABLE_SIZE: usize = 2000 * 1000 * 1000;
 
 pub struct Engine {
     pub table: TTable,
