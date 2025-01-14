@@ -170,6 +170,11 @@ impl Engine {
         match self.min_search(history) {
             TTableEntry::Node(depth, _) => {
                 self.depth = depth + 1;
+
+                if !deadline.check_depth(depth) {
+                    return Err(());
+                }
+
                 let result =
                     self.ab_search::<true>(history, self.depth, AlphaBeta::new(), deadline);
 

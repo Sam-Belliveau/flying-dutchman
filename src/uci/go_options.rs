@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use crate::search::Depth;
 use chess::{Board, Piece};
 use logos::Logos;
 
@@ -9,10 +10,12 @@ use crate::{
 };
 
 const BUFFER: Duration = Duration::from_millis(250);
+const UNLIMITED_TIME_DEPTH: Depth = 7;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum GoOptions {
-    Infinite,
+    Infinite, 
+    ToDepth(Depth),
 
     MoveTime(Duration),
 
@@ -36,7 +39,7 @@ impl GoOptions {
         while let Some(token) = lexer.next() {
             match token {
                 Ok(Infinite) => {
-                    return GoOptions::Infinite;
+                    return GoOptions::ToDepth(UNLIMITED_TIME_DEPTH);
                 }
                 Ok(MoveTime) => {
                     if let Some(Ok(Number(ms))) = lexer.next() {
@@ -84,6 +87,7 @@ impl GoOptions {
     pub fn to_deadline(self, board: &Board) -> Deadline {
         match self {
             GoOptions::Infinite => Deadline::none(),
+            GoOptions::ToDepth(depth) => Deadline::depth(depth),
             GoOptions::MoveTime(time) => Deadline::timeout(time),
             GoOptions::TimeLimit {
                 white_time,

@@ -3,9 +3,12 @@ use std::{
     time::Instant,
 };
 
+use super::Depth;
+
 pub struct Deadline {
     deadline: Option<Instant>,
     trigger: AtomicBool,
+    max_depth: Option<Depth>,
 }
 
 impl Deadline {
@@ -13,6 +16,15 @@ impl Deadline {
         Deadline {
             deadline: None,
             trigger: AtomicBool::new(false),
+            max_depth: None
+        }
+    }
+
+    pub fn depth(depth: Depth) -> Deadline {
+        Deadline {
+            deadline: None,
+            trigger: AtomicBool::new(false),
+            max_depth: Some(depth)
         }
     }
 
@@ -20,6 +32,15 @@ impl Deadline {
         Deadline {
             deadline: Some(Instant::now() + duration),
             trigger: AtomicBool::new(false),
+            max_depth: None
+        }
+    }
+
+    pub fn check_depth(&self, depth: Depth) -> bool {
+        if let Some(max_depth) = self.max_depth {
+            depth < max_depth
+        } else {
+            true
         }
     }
 
