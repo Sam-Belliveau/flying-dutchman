@@ -13,7 +13,7 @@ const BUFFER: Duration = Duration::from_millis(250);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum GoOptions {
-    Infinite, 
+    Infinite,
     ToDepth(Depth),
 
     MoveTime(Duration),
@@ -100,22 +100,28 @@ impl GoOptions {
                 black_inc,
             } => {
                 let side = board.side_to_move();
-                let moves_left = board.pieces(Piece::Pawn).popcnt()
-                    + board.pieces(Piece::Knight).popcnt()
-                    + board.pieces(Piece::Bishop).popcnt()
-                    + 2 * board.pieces(Piece::Rook).popcnt()
-                    + 4 * board.pieces(Piece::Queen).popcnt();
 
                 let (time, inc) = match side {
                     chess::Color::White => (white_time, white_inc),
                     chess::Color::Black => (black_time, black_inc),
                 };
 
-                let maxtime_a = time - BUFFER;
-                let maxtime_b = time / 5;
-                let maxtime = maxtime_a.min(maxtime_b);
-                let movetime = time / moves_left + inc - BUFFER;
-                Deadline::timeout(movetime.min(maxtime))
+                let moves_left = 10
+                    + board.pieces(Piece::Pawn).popcnt()
+                    + board.pieces(Piece::Knight).popcnt()
+                    + board.pieces(Piece::Bishop).popcnt()
+                    + 2 * board.pieces(Piece::Rook).popcnt()
+                    + 4 * board.pieces(Piece::Queen).popcnt();
+
+                let max_time = time.checked_div(2).unwrap_or_default();
+                let time_for_move = (time + inc)
+                    .checked_div(moves_left as u32)
+                    .unwrap_or_default();
+
+                let raw_budget = time_for_move.min(max_time);
+                let final_budget = raw_budget.saturating_sub(BUFFER);
+
+                Deadline::timeout(final_budget)
             }
         }
     }
