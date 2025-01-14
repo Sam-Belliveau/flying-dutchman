@@ -3,13 +3,13 @@ pub type Score = i64;
 // By defining a Centipawn as this number,
 // the score will be a multiple of many prime factors,
 // making it easier to divide and work with.
-pub const CENTIPAWN: Score = 5040;
+pub const CENTIPAWN: Score = 720720;
 
 pub const MATE: Score = Score::MAX / 16;
 pub const MATE_MOVE: Score = CENTIPAWN;
 pub const MATE_CUTOFF: Score = MATE - 1024 * MATE_MOVE;
 
-pub const DRAW: Score = -80 * CENTIPAWN;
+pub const DRAW: Score = -MATE;
 
 pub fn score_mark(score: Score) -> Score {
     // This is how we keep track of how many moves we are from mate.
