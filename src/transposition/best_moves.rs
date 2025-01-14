@@ -1,8 +1,8 @@
 use chess::ChessMove;
 
-use crate::evaluate::{Score, MATE};
+use crate::evaluate::{score_mark, Score, MATE};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RatedMove {
     pub score: Score,
     pub mv: ChessMove,
@@ -12,14 +12,21 @@ impl RatedMove {
     pub fn new(score: Score, mv: ChessMove) -> Self {
         Self { score, mv }
     }
+
+    pub fn mark(&self) -> Self {
+        Self {
+            score: score_mark(self.score),
+            mv: self.mv,
+        }
+    }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BestMoves {
     Empty,
     Best1(RatedMove),
     Best2(RatedMove, RatedMove),
-    Best3(RatedMove, RatedMove, RatedMove)
+    Best3(RatedMove, RatedMove, RatedMove),
 }
 
 impl BestMoves {
@@ -32,7 +39,7 @@ impl BestMoves {
             BestMoves::Empty => false,
             BestMoves::Best1(b1) => mv == b1.mv,
             BestMoves::Best2(b1, b2) => mv == b1.mv || mv == b2.mv,
-            BestMoves::Best3(b1, b2, b3) => mv == b1.mv || mv == b2.mv || mv == b3.mv
+            BestMoves::Best3(b1, b2, b3) => mv == b1.mv || mv == b2.mv || mv == b3.mv,
         }
     }
 
@@ -94,7 +101,7 @@ impl BestMoves {
             BestMoves::Empty => None,
             BestMoves::Best1(best, ..) => Some(best.mv),
             BestMoves::Best2(best, ..) => Some(best.mv),
-            BestMoves::Best3(best, ..) => Some(best.mv)
+            BestMoves::Best3(best, ..) => Some(best.mv),
         }
     }
 
@@ -103,7 +110,16 @@ impl BestMoves {
             Self::Empty => -MATE,
             Self::Best1(b1, ..) => b1.score,
             Self::Best2(b1, ..) => b1.score,
-            Self::Best3(b1, ..) => b1.score
+            Self::Best3(b1, ..) => b1.score,
+        }
+    }
+
+    pub fn marked(&self) -> Self {
+        match self {
+            Self::Empty => Self::Empty,
+            Self::Best1(b1, ..) => Self::Best1(b1.mark()),
+            Self::Best2(b1, b2, ..) => Self::Best2(b1.mark(), b2.mark()),
+            Self::Best3(b1, b2, b3, ..) => Self::Best3(b1.mark(), b2.mark(), b3.mark()),
         }
     }
 }

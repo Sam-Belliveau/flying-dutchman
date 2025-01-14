@@ -14,7 +14,7 @@ pub enum NegaMaxResult {
 pub struct AlphaBeta {
     pub alpha: Score,
     pub beta: Score,
-    pub ply: Depth
+    pub ply: Depth,
 }
 
 impl AlphaBeta {
@@ -36,6 +36,10 @@ impl AlphaBeta {
         } else {
             NegaMaxResult::Worse
         }
+    }
+
+    pub fn opponent(&self) -> bool {
+        self.ply % 2 == 1
     }
 }
 

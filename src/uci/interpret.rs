@@ -6,7 +6,7 @@ use std::{
 use chess::{Board, ChessMove};
 use logos::Logos;
 
-use crate::tests;
+use crate::{search::board_history::BoardHistory, tests};
 
 use super::{
     go_options::GoOptions,
@@ -17,7 +17,7 @@ use super::{
 
 pub fn uci_loop() {
     let mut thread = UCIThread::new();
-    let mut board = Board::default();
+    let mut history = BoardHistory::new(Board::default());
 
     let stdin = io::stdin();
     loop {
@@ -45,10 +45,10 @@ pub fn uci_loop() {
                 Ok(Go) => {
                     // Start searching for a move.
                     let info = GoOptions::build(lexer.remainder().trim());
-                    let deadline = info.to_deadline(&board);
+                    let deadline = info.to_deadline(&history.last());
                     for _ in lexer.by_ref() {}
 
-                    thread.search(board, deadline);
+                    thread.search(history, deadline);
                 }
                 Ok(Stop) => {
                     thread.stop();
@@ -63,24 +63,28 @@ pub fn uci_loop() {
                     for _ in lexer.by_ref() {}
 
                     if info.starts_with("startpos") {
-                        board = Board::default();
+                        history = BoardHistory::new(Board::default());
                         if info.starts_with("startpos moves") {
                             let moves = info.trim_start_matches("startpos moves ");
                             for chess_move in moves.split_whitespace() {
                                 if let Ok(chess_move) = ChessMove::from_str(chess_move) {
-                                    board = board.make_move_new(chess_move);
+                                    history = history.with_move(chess_move);
                                 }
                             }
                         }
                     } else if info.starts_with("fen") {
                         let fen = info.trim_start_matches("fen ");
                         if let Ok(new_board) = Board::from_str(fen.trim()) {
-                            board = new_board;
+                            if new_board == Board::default() {
+                                history = BoardHistory::new(new_board);
+                            } else {
+                                history = history.with_board(new_board);
+                            }
                         }
 
                         for chess_move in fen.split_whitespace() {
                             if let Ok(chess_move) = ChessMove::from_str(chess_move) {
-                                board = board.make_move_new(chess_move);
+                                history = history.with_move(chess_move);
                             }
                         }
                     }

@@ -4,7 +4,7 @@ use chess::{Board, Color};
 
 use crate::{
     evaluate::score_to_str,
-    search::{deadline::Deadline, engine::Engine},
+    search::{board_history::BoardHistory, deadline::Deadline, engine::Engine},
     transposition::table_entry::TTableEntry,
 };
 
@@ -25,28 +25,28 @@ pub fn play_self() {
     let mut engine = Engine::new();
     engine.table.set_table_size(16000000000);
 
-    let mut board = Board::default();
+    let mut board = BoardHistory::new(Board::default());
 
     let mut turn = 0;
     let mut game = String::from("");
     let mut deadline;
     for _ in 0..500 {
-        if board.side_to_move() == Color::White {
+        if board.last().side_to_move() == Color::White {
             turn += 1;
             game += &format!("{}. ", turn);
         }
 
-        match board.side_to_move() {
+        match board.last().side_to_move() {
             Color::White => println!("White to move:"),
             Color::Black => println!("Black to move:"),
         }
 
-        deadline = Deadline::timeout(Duration::from_millis(5000));
-        print_result("Init   ", engine.min_search(&board));
+        deadline = Deadline::timeout(Duration::from_millis(500));
+        print_result("Init   ", engine.min_search(board));
         let mut rep = 0;
         let mut presult = None;
-        while let Ok(result) = engine.iterative_deepening_search(&board, &deadline) {
-            print_result("Iter   ", engine.min_search(&board));
+        while let Ok(result) = engine.iterative_deepening_search(board, &deadline) {
+            print_result("Iter   ", engine.min_search(board));
 
             if presult == Some(result) {
                 rep += 1;
@@ -61,8 +61,8 @@ pub fn play_self() {
 
         // let depth = engine.cached_eval(&board).unwrap().depth;
         // println!("selecting");
-        if let Some(choice) = engine.best_move(&board) {
-            print_result("Final  ", engine.min_search(&board));
+        if let Some(choice) = engine.best_move(board) {
+            print_result("Final  ", engine.min_search(board));
             println!();
             println!(
                 "-----------------------------------------------------------------------------"
@@ -74,13 +74,13 @@ pub fn play_self() {
             );
             println!("Memory Bytes: {}", engine.memory_bytes());
             print!("\n\n");
-            board = board.make_move_new(choice);
+            board = board.with_move(choice);
         } else {
             println!();
-            match board.status() {
+            match board.last().status() {
                 chess::BoardStatus::Checkmate => {
                     println!("Checkmate!");
-                    match board.side_to_move() {
+                    match board.last().side_to_move() {
                         Color::White => println!("Black wins!"),
                         Color::Black => println!("White wins!"),
                     }

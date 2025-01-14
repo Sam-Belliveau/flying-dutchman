@@ -1,4 +1,5 @@
 pub mod alpha_beta;
+pub mod board_history;
 pub mod deadline;
 pub mod engine;
 pub mod movegen;

@@ -1,8 +1,6 @@
 use std::time::Instant;
 
-use chess::Board;
-
-use crate::{evaluate::score_to_str, search::engine::Engine, uci::stdout_sync};
+use crate::{evaluate::score_to_str, search::{board_history::BoardHistory, engine::Engine}, uci::stdout_sync};
 
 macro_rules! uci_token {
     ($val:expr) => {
@@ -23,13 +21,13 @@ macro_rules! uci_end {
     };
 }
 
-pub fn board_information(engine: &mut Engine, board: Board, search_start: Instant) {
-    let board_info = engine.min_search(&board);
+pub fn board_information(engine: &mut Engine, history: BoardHistory, search_start: Instant) {
+    let board_info = engine.min_search(history);
 
     let time_nano = search_start.elapsed().as_nanos() as usize + 1;
 
     let depth = board_info.depth();
-    let seldepth = engine.get_pv_line(board).count();
+    let seldepth = engine.get_pv_line(history.last()).count();
     let multipv = 1;
     let score = score_to_str(board_info.score());
     let nodes = 1 + engine.get_node_count();
@@ -50,15 +48,15 @@ pub fn board_information(engine: &mut Engine, board: Board, search_start: Instan
     uci_variable!(time);
 
     uci_token!("pv");
-    for movement in engine.get_pv_line(board) {
+    for movement in engine.get_pv_line(history.last()) {
         uci_token!(movement);
     }
 
     uci_end!();
 }
 
-pub fn board_best_move(engine: &mut Engine, board: Board) {
-    let board_info = engine.min_search(&board);
+pub fn board_best_move(engine: &mut Engine, board: BoardHistory) {
+    let board_info = engine.min_search(board);
 
     if let Some(bestmove) = board_info.peek() {
         let score = score_to_str(board_info.score());

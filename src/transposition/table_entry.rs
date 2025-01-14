@@ -1,13 +1,13 @@
 use chess::ChessMove;
 
 use crate::{
-    evaluate::Score,
+    evaluate::{score_mark, Score},
     search::{Depth, DEPTH_EDGE},
 };
 
 use super::best_moves::BestMoves;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TTableEntry {
     Node(Depth, BestMoves),
     Edge(Score),
@@ -35,7 +35,7 @@ impl TTableEntry {
                     *self = result;
                 }
             }
-            (Node(..), Edge(..)) => { unreachable!("A board that used to have moves is now in check!") }
+            (Node(..), Edge(..)) => { *self = result; }
             (Edge(..), Node(..)) => {}
             (Edge(score), Edge(new_score)) => {
                 if score < new_score {
@@ -50,6 +50,20 @@ impl TTableEntry {
             TTableEntry::Node(_, moves) => moves.score(),
             TTableEntry::Edge(score) => *score,
         }
+    }
+
+    pub fn neg_score(&self) -> Score {
+        match self {
+            TTableEntry::Node(_, moves) => -moves.score(),
+            TTableEntry::Edge(score) => -*score,
+        }
+    }
+
+    pub fn mark(&self) -> Result<Self, ()> {
+        Ok(match self {
+            TTableEntry::Node(depth, moves) => TTableEntry::Node(*depth, moves.marked()),
+            TTableEntry::Edge(score) => TTableEntry::Edge(score_mark(*score)),
+        })
     }
 
     pub fn depth(&self) -> Depth {

@@ -3,15 +3,12 @@ use std::{
     thread,
 };
 
-use chess::Board;
-
-use crate::search::{deadline::Deadline, engine::Engine};
+use crate::search::{board_history::BoardHistory, deadline::Deadline, engine::Engine};
 
 use super::display;
 
 pub struct UCIThread {
     deadline: Arc<Deadline>,
-    board: Board,
     engine: Arc<Mutex<Engine>>,
     search_thread: Option<thread::JoinHandle<()>>,
 }
@@ -20,7 +17,6 @@ impl UCIThread {
     pub fn new() -> UCIThread {
         UCIThread {
             deadline: Arc::new(Deadline::none()),
-            board: Board::default(),
             engine: Arc::new(Mutex::new(Engine::new())),
             search_thread: None,
         }
@@ -28,12 +24,11 @@ impl UCIThread {
 
     pub fn reset(&mut self) {
         self.stop();
-        self.engine.lock().unwrap().reset();
     }
 
     pub fn search_thread(
         engine: Arc<Mutex<Engine>>,
-        board: Board,
+        history: BoardHistory,
         deadline: Arc<Deadline>,
         print_result: bool,
     ) -> thread::JoinHandle<()> {
@@ -42,18 +37,18 @@ impl UCIThread {
                 let start = engine.start_new_search();
 
                 if print_result {
-                    display::board_information(&mut engine, board, start);
+                    display::board_information(&mut engine, history, start);
                 }
 
-                while let Ok(..) = engine.iterative_deepening_search(&board, &deadline) {
+                while let Ok(..) = engine.iterative_deepening_search(history, &deadline) {
                     if print_result {
-                        display::board_information(&mut engine, board, start);
+                        display::board_information(&mut engine, history, start);
                     }
                 }
 
                 if print_result {
-                    display::board_information(&mut engine, board, start);
-                    display::board_best_move(&mut engine, board);
+                    display::board_information(&mut engine, history, start);
+                    display::board_best_move(&mut engine, history);
                 }
             }
             Err(_) => {
@@ -62,7 +57,7 @@ impl UCIThread {
         })
     }
 
-    pub fn search(&mut self, board: Board, deadline: Deadline) {
+    pub fn search(&mut self, history: BoardHistory, deadline: Deadline) {
         if let Some(thread) = self.search_thread.take() {
             if !thread.is_finished() {
                 panic!("Search thread already running");
@@ -70,11 +65,10 @@ impl UCIThread {
         }
 
         self.deadline = Arc::new(deadline);
-        self.board = board;
 
         self.search_thread = Some(Self::search_thread(
             Arc::clone(&self.engine),
-            self.board,
+            history,
             Arc::clone(&self.deadline),
             true,
         ));

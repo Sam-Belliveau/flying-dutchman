@@ -6,10 +6,7 @@ use std::{
 use chess::Board;
 use lru::LruCache;
 
-use crate::{
-    evaluate::Score,
-    search::{alpha_beta::AlphaBeta, Depth},
-};
+use crate::search::{alpha_beta::AlphaBeta, Depth};
 
 use super::{best_moves::BestMoves, pv_line::PVLine, table_entry::TTableEntry};
 
@@ -35,7 +32,7 @@ use TTableType::*;
 pub enum TTableSample {
     None,
     Moves(BestMoves),
-    Score(Score),
+    Score(TTableEntry),
 }
 
 pub struct TTable {
@@ -58,10 +55,6 @@ impl TTable {
             .resize(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap())
     }
 
-    pub fn get(&mut self, ttype: TTableType, board: Board) -> Option<&TTableEntry> {
-        self.table.get(&(ttype, board))
-    }
-
     pub fn update<const PV: bool>(&mut self, ttype: TTableType, board: Board, result: TTableEntry) {
         if PV {
             self.pv_cache.push((ttype, board, result.clone()));
@@ -81,8 +74,7 @@ impl TTable {
             pv = pv.or(saved.moves());
 
             if depth <= saved.depth() {
-                let score = saved.score();
-                let result = TTableSample::Score(score);
+                let result = TTableSample::Score(*saved);
                 self.table.promote(&(Exact, *board));
                 return result;
             }
@@ -94,7 +86,7 @@ impl TTable {
             if depth <= saved.depth() {
                 let score = saved.score();
                 if window.beta <= score {
-                    let result = TTableSample::Score(score);
+                    let result = TTableSample::Score(*saved);
                     self.table.promote(&(Lower, *board));
                     return result;
                 }
@@ -107,7 +99,7 @@ impl TTable {
             if depth <= saved.depth() {
                 let score = saved.score();
                 if score <= window.alpha {
-                    let result = TTableSample::Score(score);
+                    let result = TTableSample::Score(*saved);
                     self.table.promote(&(Upper, *board));
                     return result;
                 }
