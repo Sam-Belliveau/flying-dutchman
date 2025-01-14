@@ -106,22 +106,18 @@ impl GoOptions {
                     chess::Color::Black => (black_time, black_inc),
                 };
 
-                let moves_left = 10
-                    + board.pieces(Piece::Pawn).popcnt()
+                let moves_left = board.pieces(Piece::Pawn).popcnt()
                     + board.pieces(Piece::Knight).popcnt()
                     + board.pieces(Piece::Bishop).popcnt()
                     + 2 * board.pieces(Piece::Rook).popcnt()
                     + 4 * board.pieces(Piece::Queen).popcnt();
 
-                let max_time = time.checked_div(2).unwrap_or_default();
                 let time_for_move = (time + inc)
                     .checked_div(moves_left as u32)
-                    .unwrap_or_default();
+                    .unwrap_or_default()
+                    .saturating_sub(BUFFER);
 
-                let raw_budget = time_for_move.min(max_time);
-                let final_budget = raw_budget.saturating_sub(BUFFER);
-
-                Deadline::timeout(final_budget)
+                Deadline::timeout(time_for_move)
             }
         }
     }
