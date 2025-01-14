@@ -42,11 +42,11 @@ pub fn play_self() {
         }
 
         deadline = Deadline::timeout(Duration::from_millis(500));
-        print_result("Init   ", engine.min_search(board));
+        print_result("Init   ", engine.min_search(&board));
         let mut rep = 0;
         let mut presult = None;
-        while let Ok(result) = engine.iterative_deepening_search(board, &deadline) {
-            print_result("Iter   ", engine.min_search(board));
+        while let Ok(result) = engine.iterative_deepening_search(&board, &deadline) {
+            print_result("Iter   ", engine.min_search(&board));
 
             if presult == Some(result) {
                 rep += 1;
@@ -61,8 +61,8 @@ pub fn play_self() {
 
         // let depth = engine.cached_eval(&board).unwrap().depth;
         // println!("selecting");
-        if let Some(choice) = engine.best_move(board) {
-            print_result("Final  ", engine.min_search(board));
+        if let Some(choice) = engine.best_move(&board) {
+            print_result("Final  ", engine.min_search(&board));
             println!();
             println!(
                 "-----------------------------------------------------------------------------"

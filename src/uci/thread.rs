@@ -37,18 +37,18 @@ impl UCIThread {
                 let start = engine.start_new_search();
 
                 if print_result {
-                    display::board_information(&mut engine, history, start);
+                    display::board_information(&mut engine, &history, start);
                 }
 
-                while let Ok(..) = engine.iterative_deepening_search(history, &deadline) {
+                while let Ok(..) = engine.iterative_deepening_search(&history, &deadline) {
                     if print_result {
-                        display::board_information(&mut engine, history, start);
+                        display::board_information(&mut engine, &history, start);
                     }
                 }
 
                 if print_result {
-                    display::board_information(&mut engine, history, start);
-                    display::board_best_move(&mut engine, history);
+                    display::board_information(&mut engine, &history, start);
+                    display::board_best_move(&mut engine, &history);
                 }
             }
             Err(_) => {
@@ -57,7 +57,7 @@ impl UCIThread {
         })
     }
 
-    pub fn search(&mut self, history: BoardHistory, deadline: Deadline) {
+    pub fn search(&mut self, history: &BoardHistory, deadline: Deadline) {
         if let Some(thread) = self.search_thread.take() {
             if !thread.is_finished() {
                 panic!("Search thread already running");
@@ -68,7 +68,7 @@ impl UCIThread {
 
         self.search_thread = Some(Self::search_thread(
             Arc::clone(&self.engine),
-            history,
+            history.clone(),
             Arc::clone(&self.deadline),
             true,
         ));

@@ -45,10 +45,10 @@ pub fn uci_loop() {
                 Ok(Go) => {
                     // Start searching for a move.
                     let info = GoOptions::build(lexer.remainder().trim());
-                    let deadline = info.to_deadline(&history.last());
+                    let deadline = info.to_deadline(history.last());
                     for _ in lexer.by_ref() {}
 
-                    thread.search(history, deadline);
+                    thread.search(&history, deadline);
                 }
                 Ok(Stop) => {
                     thread.stop();

@@ -55,14 +55,14 @@ impl TTable {
             .resize(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap())
     }
 
-    pub fn update<const PV: bool>(&mut self, ttype: TTableType, board: Board, result: TTableEntry) {
+    pub fn update<const PV: bool>(&mut self, ttype: TTableType, board: &Board, result: TTableEntry) {
         if PV {
-            self.pv_cache.push((ttype, board, result.clone()));
+            self.pv_cache.push((ttype, *board, result.clone()));
         }
 
         let entry = self
             .table
-            .get_or_insert_mut((ttype, board), || result.clone());
+            .get_or_insert_mut((ttype, *board), || result.clone());
 
         entry.update(result);
     }
@@ -115,11 +115,11 @@ impl TTable {
 
     pub fn refresh_pv_line(&mut self, clean: bool) {
         for (ttype, board, entry) in self.pv_cache_old.clone() {
-            self.update::<false>(ttype, board, entry);
+            self.update::<false>(ttype, &board, entry);
         }
 
         for (ttype, board, entry) in self.pv_cache.clone() {
-            self.update::<false>(ttype, board, entry);
+            self.update::<false>(ttype, &board, entry);
         }
 
         if clean {
@@ -129,8 +129,8 @@ impl TTable {
         }
     }
 
-    pub fn get_pv_line(&mut self, board: Board) -> PVLine {
-        PVLine::new(&mut self.table, board)
+    pub fn get_pv_line(&mut self, board: &Board) -> PVLine {
+        PVLine::new(&mut self.table, *board)
     }
 
     pub fn hashfull_permille(&self) -> usize {

@@ -78,20 +78,20 @@ impl BestMoves {
         }
     }
 
-    pub fn pop(&mut self) -> Option<ChessMove> {
+    pub fn pop(&mut self) -> Option<RatedMove> {
         match *self {
             BestMoves::Empty => None,
             BestMoves::Best1(best) => {
                 *self = BestMoves::Empty;
-                Some(best.mv)
+                Some(best)
             }
             BestMoves::Best2(best, n1) => {
                 *self = BestMoves::Best1(n1);
-                Some(best.mv)
+                Some(best)
             }
             BestMoves::Best3(best, n1, n2) => {
                 *self = BestMoves::Best2(n1, n2);
-                Some(best.mv)
+                Some(best)
             }
         }
     }
@@ -140,6 +140,6 @@ impl Iterator for BestMoves {
     type Item = ChessMove;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.pop()
+        self.pop().map(|rated| rated.mv)
     }
 }

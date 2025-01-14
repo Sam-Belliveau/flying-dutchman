@@ -57,7 +57,7 @@ impl Iterator for OrderedMoveGen {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(pv) = self.pv_iter.pop() {
-            return Some(pv);
+            return Some(pv.mv);
         }
 
         if let Some(mv) = self.move_gen.next() {

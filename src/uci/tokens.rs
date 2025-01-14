@@ -30,6 +30,12 @@ pub enum UCIToken {
     #[token("stop")]
     Stop,
 
+    #[token("ponder")]
+    Ponder,
+
+    #[token("ponderhit")]
+    PonderHit,
+
     #[token("quit")]
     Quit,
 }
@@ -45,9 +51,6 @@ pub enum UCIGoToken {
 
     #[token("searchmoves")]
     SearchMoves,
-
-    #[token("ponder")]
-    Ponder,
 
     #[token("wtime")]
     WhiteTime,

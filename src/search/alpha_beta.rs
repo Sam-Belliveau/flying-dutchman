@@ -26,6 +26,14 @@ impl AlphaBeta {
         }
     }
 
+    pub fn null_move(&self) -> Self {
+        Self {
+            alpha: 0 - self.beta,
+            beta: 1 - self.beta,
+            ply: self.ply + 1,
+        }
+    }
+
     pub fn negamax(&mut self, score: Score) -> NegaMaxResult {
         if self.beta <= score {
             self.alpha = score;
@@ -38,6 +46,10 @@ impl AlphaBeta {
         }
     }
 
+    pub fn span(&self) -> Score {
+        self.beta - self.alpha
+    }
+    
     pub fn opponent(&self) -> bool {
         self.ply % 2 == 1
     }

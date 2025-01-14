@@ -21,7 +21,7 @@ macro_rules! uci_end {
     };
 }
 
-pub fn board_information(engine: &mut Engine, history: BoardHistory, search_start: Instant) {
+pub fn board_information(engine: &mut Engine, history: &BoardHistory, search_start: Instant) {
     let board_info = engine.min_search(history);
 
     let time_nano = search_start.elapsed().as_nanos() as usize + 1;
@@ -55,7 +55,7 @@ pub fn board_information(engine: &mut Engine, history: BoardHistory, search_star
     uci_end!();
 }
 
-pub fn board_best_move(engine: &mut Engine, board: BoardHistory) {
+pub fn board_best_move(engine: &mut Engine, board: &BoardHistory) {
     let board_info = engine.min_search(board);
 
     if let Some(bestmove) = board_info.peek() {
