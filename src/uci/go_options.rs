@@ -10,7 +10,6 @@ use crate::{
 };
 
 const BUFFER: Duration = Duration::from_millis(250);
-const UNLIMITED_TIME_DEPTH: Depth = 7;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum GoOptions {
@@ -39,7 +38,7 @@ impl GoOptions {
         while let Some(token) = lexer.next() {
             match token {
                 Ok(Infinite) => {
-                    return GoOptions::ToDepth(UNLIMITED_TIME_DEPTH);
+                    return GoOptions::Infinite;
                 }
                 Ok(MoveTime) => {
                     if let Some(Ok(Number(ms))) = lexer.next() {
@@ -65,6 +64,11 @@ impl GoOptions {
                 Ok(BlackTimeInc) => {
                     if let Some(Ok(Number(ms))) = lexer.next() {
                         black_inc = Some(Duration::from_millis(ms));
+                    }
+                }
+                Ok(Depth) => {
+                    if let Some(Ok(Number(depth))) = lexer.next() {
+                        return GoOptions::ToDepth(depth.try_into().unwrap_or(0));
                     }
                 }
                 Ok(_) => {}
