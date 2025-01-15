@@ -214,11 +214,11 @@ impl Engine {
     ) -> Result<TTableEntry, ()> {
         match self.min_search(&history) {
             TTableEntry::Node(mut depth, _) => {
-                depth += 1;
                 if !deadline.check_depth(depth) {
                     return Err(());
                 }
 
+                depth += 1;
                 let result = self.ab_search::<true>(&history, depth, AlphaBeta::new(), deadline);
 
                 if let Ok(score) = result {

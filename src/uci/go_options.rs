@@ -115,9 +115,7 @@ impl GoOptions {
                     / 4;
 
                 let adjusted_inc = inc
-                    .checked_mul(moves_left - 1)
-                    .unwrap_or_default()
-                    .checked_div(moves_left as u32)
+                    .checked_div(2)
                     .unwrap_or_default();
 
                 let time_for_move = adjusted_inc + time
