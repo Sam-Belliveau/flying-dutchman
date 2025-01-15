@@ -106,7 +106,7 @@ impl GoOptions {
                     chess::Color::Black => (black_time, black_inc),
                 };
 
-                let moves_left = (16
+                let moves_left = (48
                     + board.pieces(Piece::Pawn).popcnt()
                     + 4 * board.pieces(Piece::Knight).popcnt()
                     + 4 * board.pieces(Piece::Bishop).popcnt()
