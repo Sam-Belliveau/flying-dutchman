@@ -106,13 +106,13 @@ impl GoOptions {
                     chess::Color::Black => (black_time, black_inc),
                 };
 
-                let moves_left = (8
+                let moves_left = (16
                     + board.pieces(Piece::Pawn).popcnt()
-                    + 2 * board.pieces(Piece::Knight).popcnt()
-                    + 2 * board.pieces(Piece::Bishop).popcnt()
-                    + 5 * board.pieces(Piece::Rook).popcnt()
-                    + 10 * board.pieces(Piece::Queen).popcnt())
-                    / 2;
+                    + 4 * board.pieces(Piece::Knight).popcnt()
+                    + 4 * board.pieces(Piece::Bishop).popcnt()
+                    + 8 * board.pieces(Piece::Rook).popcnt()
+                    + 16 * board.pieces(Piece::Queen).popcnt())
+                    / 4;
 
                 let time_for_move = (time + inc)
                     .checked_div(moves_left as u32)
