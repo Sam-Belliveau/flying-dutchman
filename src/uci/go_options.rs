@@ -114,7 +114,13 @@ impl GoOptions {
                     + 16 * board.pieces(Piece::Queen).popcnt())
                     / 4;
 
-                let time_for_move = (time + inc)
+                let adjusted_inc = inc
+                    .checked_mul(moves_left - 1)
+                    .unwrap_or_default()
+                    .checked_div(moves_left as u32)
+                    .unwrap_or_default();
+
+                let time_for_move = adjusted_inc + time
                     .checked_div(moves_left as u32)
                     .unwrap_or_default()
                     .saturating_sub(BUFFER);
