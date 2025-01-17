@@ -104,10 +104,10 @@ impl Engine {
         // Opponent Modeling to improve play against humans.
         let opponent_depth = 7;
         if let Some(opponent_engine) = &mut self.opponent_engine {
-            if window.opponent() {
+            if window.opponent() && window.ply < 2 {
                 let opponent_eval = opponent_engine.ab_search::<PV>(
                     board,
-                    depth.min(opponent_depth),
+                    opponent_depth.min(depth),
                     AlphaBeta::new(),
                     deadline,
                 )?;
@@ -139,11 +139,10 @@ impl Engine {
 
         // Null Move Pruning
         let r: Depth = 2;
-        if !PV && depth > r && !board.was_null_move() {
-            if let Some(null_board) = board.last().null_move() {
-                let null_next = board.with_board(null_board);
+        if !PV && depth > r {
+            if let Some(null_board) = board.with_null_move() {
                 let null_eval = -self
-                    .ab_search::<false>(&null_next, depth - r, window.null_move(), deadline)?
+                    .ab_search::<false>(&null_board, depth - r, window.null_move(), deadline)?
                     .score();
 
                 if null_eval >= window.beta {

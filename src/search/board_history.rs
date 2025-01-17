@@ -24,14 +24,16 @@ impl BoardHistory {
         self.with_board(new_board)
     }
 
-    pub fn was_null_move(&self) -> bool {
-        if let Some(previous) = self.history.get(1) {
-            if let Some(previous) = previous.null_move() {
-                return previous == *self.last();
-            }     
+    pub fn with_null_move(&self) -> Option<BoardHistory> {
+        if let Some(null_board) = self.last().null_move() {
+            if Some(null_board) == self.history.get(1).copied() {
+                None
+            } else {
+                Some(self.with_board(null_board))
+            }
+        } else {
+            None
         }
-
-        false
     }
 
     pub fn last(&self) -> &Board {
