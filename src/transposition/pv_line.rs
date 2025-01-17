@@ -2,16 +2,16 @@ use std::collections::HashSet;
 
 use chess::{Board, ChessMove};
 
-use super::table::{TTableHashMap, TTableType::*};
+use super::table::{TTable, TTableType::*};
 
 pub struct PVLine<'a> {
-    table: &'a mut TTableHashMap,
+    table: &'a mut TTable,
     passed: HashSet<Board>,
     board: Board,
 }
 
 impl<'a> PVLine<'a> {
-    pub fn new(table: &'a mut TTableHashMap, board: Board) -> PVLine<'a> {
+    pub fn new(table: &'a mut TTable, board: Board) -> PVLine<'a> {
         PVLine {
             table,
             passed: HashSet::new(),
@@ -24,9 +24,9 @@ impl Iterator for PVLine<'_> {
     type Item = ChessMove;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(entry) = (self.table.get(&(Exact, self.board)).cloned())
-            .or_else(|| self.table.get(&(Lower, self.board)).cloned())
-            .or_else(|| self.table.get(&(Upper, self.board)).cloned())
+        if let Some(entry) = (self.table.get::<true>(Exact, &self.board))
+            .or_else(|| self.table.get::<true>(Lower, &self.board))
+            .or_else(|| self.table.get::<true>(Upper, &self.board))
         {
             if let Some(best_move) = entry.peek() {
                 if self.passed.insert(self.board) {

@@ -2,18 +2,21 @@ use std::time::Instant;
 
 use crate::{evaluate::score_to_str, search::{board_history::BoardHistory, engine::Engine}, uci::stdout_sync};
 
+#[macro_export]
 macro_rules! uci_token {
     ($val:expr) => {
         print!("{} ", $val)
     };
 }
 
+#[macro_export]
 macro_rules! uci_variable {
     ($val:expr) => {
         print!("{} {} ", stringify!($val), $val)
     };
 }
 
+#[macro_export]
 macro_rules! uci_end {
     () => {
         println!();

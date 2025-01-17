@@ -46,10 +46,6 @@ impl AlphaBeta {
         }
     }
 
-    pub fn span(&self) -> Score {
-        self.beta - self.alpha
-    }
-    
     pub fn opponent(&self) -> bool {
         self.ply % 2 == 1
     }

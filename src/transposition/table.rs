@@ -1,7 +1,4 @@
-use std::{
-    mem::{size_of, take},
-    num::NonZeroUsize,
-};
+use std::{hash::Hash, mem::size_of, num::NonZeroUsize};
 
 use chess::Board;
 use lru::LruCache;
@@ -18,7 +15,10 @@ const ELEMENT_SIZE: usize = 11
         + size_of::<u64>())
     / 10;
 
+const PV_TABLE_SIZE: usize = 256;
+
 pub type TTableHashMap = LruCache<(TTableType, Board), TTableEntry>;
+pub type PVTableHashMap = LruCache<(TTableType, Board), TTableEntry>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TTableType {
@@ -37,16 +37,14 @@ pub enum TTableSample {
 
 pub struct TTable {
     table: TTableHashMap,
-    pv_cache: Vec<(TTableType, Board, TTableEntry)>,
-    pv_cache_old: Vec<(TTableType, Board, TTableEntry)>,
+    pv_table: PVTableHashMap,
 }
 
 impl TTable {
     pub fn new(table_size: usize) -> TTable {
         TTable {
             table: TTableHashMap::new(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap()),
-            pv_cache: Vec::new(),
-            pv_cache_old: Vec::new(),
+            pv_table: PVTableHashMap::new(NonZeroUsize::new(PV_TABLE_SIZE).unwrap()),
         }
     }
 
@@ -55,52 +53,72 @@ impl TTable {
             .resize(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap())
     }
 
-    pub fn update<const PV: bool>(&mut self, ttype: TTableType, board: &Board, result: TTableEntry) {
+    pub fn update<const PV: bool>(
+        &mut self,
+        ttype: TTableType,
+        board: &Board,
+        result: TTableEntry,
+    ) {
+        let key = (ttype, *board);
+        let entry = self.table
+            .get_or_insert_mut(key, || result)
+            .update(result);
+
         if PV {
-            self.pv_cache.push((ttype, *board, result.clone()));
+            self.pv_table.put(key, *entry);
         }
-
-        let entry = self
-            .table
-            .get_or_insert_mut((ttype, *board), || result.clone());
-
-        entry.update(result);
     }
 
-    pub fn sample(&mut self, board: &Board, window: &AlphaBeta, depth: Depth) -> TTableSample {
+    pub fn peek(&self, ttype: TTableType, board: &Board) -> Option<&TTableEntry> {
+        let key = (ttype, *board);
+        self.table.peek(&key).or_else(|| self.pv_table.peek(&key))
+    }
+
+    pub fn get<const PV: bool>(&mut self, ttype: TTableType, board: &Board) -> Option<TTableEntry> {
+        let entry = self.peek(ttype, board).cloned()?;
+        self.update::<PV>(ttype, board, entry);
+        Some(entry)
+    }
+
+    pub fn sample<const PV: bool>(
+        &mut self,
+        board: &Board,
+        window: &AlphaBeta,
+        depth: Depth,
+    ) -> TTableSample {
         let mut pv = None;
 
-        if let Some(saved) = self.table.peek(&(Exact, *board)) {
+        if let Some(saved) = self.peek(Exact, board) {
             pv = pv.or(saved.moves());
 
             if depth <= saved.depth() {
                 let result = TTableSample::Score(*saved);
-                self.table.promote(&(Exact, *board));
+                self.update::<PV>(Exact, board, *saved);
                 return result;
             }
         }
 
-        if let Some(saved) = self.table.peek(&(Lower, *board)) {
+        if let Some(saved) = self.peek(Lower, board) {
             pv = pv.or(saved.moves());
 
             if depth <= saved.depth() {
                 let score = saved.score();
                 if window.beta <= score {
                     let result = TTableSample::Score(*saved);
-                    self.table.promote(&(Lower, *board));
+                    self.update::<PV>(Exact, board, *saved);
                     return result;
                 }
             }
         }
 
-        if let Some(saved) = self.table.peek(&(Upper, *board)) {
+        if let Some(saved) = self.peek(Upper, board) {
             pv = pv.or(saved.moves());
 
             if depth <= saved.depth() {
                 let score = saved.score();
                 if score <= window.alpha {
                     let result = TTableSample::Score(*saved);
-                    self.table.promote(&(Upper, *board));
+                    self.update::<PV>(Exact, board, *saved);
                     return result;
                 }
             }
@@ -113,24 +131,14 @@ impl TTable {
         }
     }
 
-    pub fn refresh_pv_line(&mut self, clean: bool) {
-        for (ttype, board, entry) in self.pv_cache_old.clone() {
-            self.update::<false>(ttype, &board, entry);
-        }
-
-        for (ttype, board, entry) in self.pv_cache.clone() {
-            self.update::<false>(ttype, &board, entry);
-        }
-
-        if clean {
-            self.pv_cache_old = take(&mut self.pv_cache);
-        } else {
-            self.pv_cache.clear();
+    pub fn promote_pv_line(&mut self, board: &Board) {
+        for _move in self.get_pv_line(board) {
+            // This promotes the PV line to the front of the cache
         }
     }
 
     pub fn get_pv_line(&mut self, board: &Board) -> PVLine {
-        PVLine::new(&mut self.table, *board)
+        PVLine::new(self, *board)
     }
 
     pub fn hashfull_permille(&self) -> usize {

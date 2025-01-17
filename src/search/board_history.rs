@@ -1,7 +1,7 @@
 use chess::{Board, ChessMove};
 use circular_buffer::CircularBuffer;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BoardHistory {
     history: CircularBuffer<9, Board>,
 }
@@ -15,7 +15,7 @@ impl BoardHistory {
 
     pub fn with_board(&self, board: Board) -> BoardHistory {
         let mut new = self.clone();
-        new.history.push_back(board);
+        new.history.push_front(board);
         new
     }
 
@@ -24,11 +24,21 @@ impl BoardHistory {
         self.with_board(new_board)
     }
 
+    pub fn was_null_move(&self) -> bool {
+        if let Some(previous) = self.history.get(1) {
+            if let Some(previous) = previous.null_move() {
+                return previous == *self.last();
+            }     
+        }
+
+        false
+    }
+
     pub fn last(&self) -> &Board {
         unsafe {
             // The buffer is never empty because it starts with
             // a board and we never remove elements from it.
-            self.history.back().unwrap_unchecked()
+            self.history.front().unwrap_unchecked()
         }
     }
 

@@ -28,26 +28,27 @@ impl TTableEntry {
         TTableEntry::Edge(DEPTH_EDGE, score)
     }
 
-    pub fn update(&mut self, result: TTableEntry) {
-        if match (*self, result) {
-            (Node(depth, moves), Node(new_depth, new_moves)) => depth
-                .cmp(&new_depth)
-                .then(moves.score().cmp(&new_moves.score()))
-                .is_lt(),
-            (Node(depth, moves), Edge(new_depth, new_score)) => depth
-                .cmp(&new_depth)
-                .then(moves.score().cmp(&new_score))
-                .is_lt(),
-            (Edge(depth, score), Node(new_depth, new_moves)) => depth
-                .cmp(&new_depth)
-                .then(score.cmp(&new_moves.score()))
-                .is_lt(),
-            (Edge(depth, score), Edge(new_depth, new_score)) => {
-                depth.cmp(&new_depth).then(score.cmp(&new_score)).is_lt()
+    pub fn update(&mut self, result: TTableEntry) -> &mut Self {
+        let (depth, score, new_depth, new_score) = match (*self, result) {
+            (Node(depth, moves), Node(new_depth, new_moves)) => {
+                (depth, moves.score(), new_depth, new_moves.score())
             }
-        } {
+            (Node(depth, moves), Edge(new_depth, new_score)) => {
+                (depth, moves.score(), new_depth, new_score)
+            }
+            (Edge(depth, score), Node(new_depth, new_moves)) => {
+                (depth, score, new_depth, new_moves.score())
+            }
+            (Edge(depth, score), Edge(new_depth, new_score)) => {
+                (depth, score, new_depth, new_score)
+            }
+        };
+
+        if depth.cmp(&new_depth).then(score.cmp(&new_score)) == std::cmp::Ordering::Less {
             *self = result;
         }
+
+        self
     }
 
     pub fn score(&self) -> Score {
