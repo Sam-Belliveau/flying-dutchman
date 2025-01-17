@@ -3,9 +3,11 @@ use std::{
     thread,
 };
 
-use crate::search::{board_history::BoardHistory, deadline::Deadline, engine::Engine};
+use crate::search::board_history::BoardHistory;
+use crate::search::deadline::Deadline;
+use crate::search::engine::Engine;
 
-use super::display;
+use crate::uci::display;
 
 pub struct UCIThread {
     deadline: Arc<Deadline>,

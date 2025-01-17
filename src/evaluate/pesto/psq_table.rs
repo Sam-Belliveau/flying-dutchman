@@ -6,7 +6,7 @@ use chess::{
 
 use crate::evaluate::Score;
 
-use super::phased_score::{PhasedScore, RawPhasedScore};
+use crate::evaluate::pesto::phased_score::{PhasedScore, RawPhasedScore};
 
 #[derive(Clone, Debug)]
 pub struct PieceSquareTable {

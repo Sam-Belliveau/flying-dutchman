@@ -3,16 +3,18 @@ use std::time::Instant;
 use chess::{Board, ChessMove, EMPTY};
 
 use crate::evaluate::{evaluate, score_mark, Score, DRAW, MATE};
-use crate::transposition::best_moves::{BestMoves, RatedMove};
+
+use crate::search::alpha_beta::{AlphaBeta, NegaMaxResult::*};
+use crate::search::board_history::BoardHistory;
+use crate::search::deadline::Deadline;
+use crate::search::movegen::OrderedMoveGen;
+use crate::search::Depth;
+
+use crate::transposition::best_moves::BestMoves;
 use crate::transposition::pv_line::PVLine;
+use crate::transposition::rated_move::RatedMove;
 use crate::transposition::table::{TTable, TTableSample, TTableType::*};
 use crate::transposition::table_entry::TTableEntry;
-
-use super::alpha_beta::{AlphaBeta, NegaMaxResult::*};
-use super::board_history::BoardHistory;
-use super::deadline::Deadline;
-use super::movegen::OrderedMoveGen;
-use super::Depth;
 
 const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
 
@@ -85,23 +87,16 @@ impl Engine {
         }
 
         // Draw Detection and Handling
-        let draw = if board.is_draw() {
-            Some(TTableEntry::edge(if window.opponent() {
-                -DRAW
-            } else {
-                DRAW
-            }))
-        } else {
-            None
-        };
+        if board.is_draw() {
+            return TTableEntry::Edge(if window.opponent() { -DRAW } else { DRAW }).mark();
+        }
 
         // Quiescence Search
         if depth <= 0 {
-            let entry = TTableEntry::new_score(0, Self::ab_qsearch(board.last(), window)?);
-            return draw.unwrap_or(entry).mark();
+            return TTableEntry::Leaf(Self::ab_qsearch(board.last(), window)?).mark();
         }
 
-        // Opponent Modeling to improve play against humans.
+        // Opponent Modeling to
         let opponent_depth = 7;
         if let Some(opponent_engine) = &mut self.opponent_engine {
             if window.opponent() && window.ply < 2 {
@@ -118,14 +113,14 @@ impl Engine {
                         .ab_search::<PV>(&next, depth - 1, -window, deadline)?
                         .score();
 
-                    let entry = TTableEntry::new(
+                    let entry = TTableEntry::Node(
                         depth,
                         BestMoves::Best1(RatedMove::new(eval, opponent_move)),
                     );
 
                     let ttype = window.table_entry_type(eval);
                     self.table.update::<PV>(ttype, board.last(), entry);
-                    return draw.unwrap_or(entry).mark();
+                    return entry.mark();
                 }
             }
         }
@@ -146,9 +141,8 @@ impl Engine {
                     .score();
 
                 if null_eval >= window.beta {
-                    let entry = TTableEntry::new_score(depth, null_eval);
-                    self.table.update::<false>(Lower, board.last(), entry);
-                    return draw.unwrap_or(entry).mark();
+                    let entry = TTableEntry::Leaf(null_eval);
+                    return entry.mark();
                 }
             }
         }
@@ -194,9 +188,9 @@ impl Engine {
 
             moves.push(RatedMove::new(eval, movement));
             if let Pruned = window.negamax(eval) {
-                let entry = TTableEntry::new(depth, moves);
+                let entry = TTableEntry::Node(depth, moves);
                 self.table.update::<PV>(Lower, board.last(), entry);
-                return draw.unwrap_or(entry).mark();
+                return entry.mark();
             }
         }
 
@@ -212,17 +206,17 @@ impl Engine {
                 DRAW
             };
 
-            let entry = TTableEntry::edge(eval);
+            let entry = TTableEntry::Edge(eval);
             self.table.update::<PV>(Exact, board.last(), entry);
-            return draw.unwrap_or(entry).mark();
+            return entry.mark();
         }
 
         // Store and Return Results
-        let entry = TTableEntry::new(depth, moves);
+        let entry = TTableEntry::Node(depth, moves);
         let ttype = original_window.table_entry_type(moves.score());
 
         self.table.update::<PV>(ttype, board.last(), entry);
-        draw.unwrap_or(entry).mark()
+        entry.mark()
     }
 
     pub fn min_search(&mut self, history: &BoardHistory) -> TTableEntry {
@@ -240,23 +234,22 @@ impl Engine {
         history: &BoardHistory,
         deadline: &Deadline,
     ) -> Result<TTableEntry, ()> {
-        match self.min_search(&history) {
-            TTableEntry::Node(mut depth, _) => {
-                if !deadline.check_depth(depth) {
-                    return Err(());
-                }
+        let depth = match self.min_search(&history) {
+            TTableEntry::Edge(..) => return Err(()),
+            default => default.depth(),
+        };
 
-                depth += 1;
-                let result = self.ab_search::<true>(&history, depth, AlphaBeta::new(), deadline);
-                self.table.promote_pv_line(history.last());
+        if !deadline.check_depth(depth) {
+            return Err(());
+        }
 
-                if let Ok(score) = result {
-                    Ok(score)
-                } else {
-                    Err(())
-                }
-            }
-            TTableEntry::Edge(..) => Err(()),
+        let result = self.ab_search::<true>(&history, depth + 1, AlphaBeta::new(), deadline);
+        self.table.promote_pv_line(history.last());
+
+        if let Ok(score) = result {
+            Ok(score)
+        } else {
+            Err(())
         }
     }
 

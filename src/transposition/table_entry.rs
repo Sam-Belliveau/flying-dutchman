@@ -1,50 +1,23 @@
 use chess::ChessMove;
 
-use crate::{
-    evaluate::{score_mark, Score},
-    search::{Depth, DEPTH_EDGE},
-};
+use crate::evaluate::{score_mark, Score};
+use crate::search::{Depth, DEPTH_EDGE, DEPTH_LEAF};
 
 use super::best_moves::BestMoves;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TTableEntry {
     Node(Depth, BestMoves),
-    Edge(Depth, Score),
+    Edge(Score),
+    Leaf(Score),
 }
 
-use TTableEntry::*;
-
 impl TTableEntry {
-    pub fn new(depth: Depth, moves: BestMoves) -> TTableEntry {
-        TTableEntry::Node(depth.max(0), moves)
-    }
-
-    pub fn new_score(depth: Depth, score: Score) -> TTableEntry {
-        TTableEntry::Edge(depth.max(0), score)
-    }
-
-    pub fn edge(score: Score) -> TTableEntry {
-        TTableEntry::Edge(DEPTH_EDGE, score)
-    }
-
     pub fn update(&mut self, result: TTableEntry) -> &mut Self {
-        let (depth, score, new_depth, new_score) = match (*self, result) {
-            (Node(depth, moves), Node(new_depth, new_moves)) => {
-                (depth, moves.score(), new_depth, new_moves.score())
-            }
-            (Node(depth, moves), Edge(new_depth, new_score)) => {
-                (depth, moves.score(), new_depth, new_score)
-            }
-            (Edge(depth, score), Node(new_depth, new_moves)) => {
-                (depth, score, new_depth, new_moves.score())
-            }
-            (Edge(depth, score), Edge(new_depth, new_score)) => {
-                (depth, score, new_depth, new_score)
-            }
-        };
+        let depth_cmp = self.depth().cmp(&result.depth());
+        let score_cmp = self.score().cmp(&result.score());
 
-        if depth.cmp(&new_depth).then(score.cmp(&new_score)) == std::cmp::Ordering::Less {
+        if depth_cmp.then(score_cmp).is_lt() {
             *self = result;
         }
 
@@ -54,21 +27,24 @@ impl TTableEntry {
     pub fn score(&self) -> Score {
         match self {
             TTableEntry::Node(_, moves) => moves.score(),
-            TTableEntry::Edge(_, score) => *score,
+            TTableEntry::Edge(score) => *score,
+            TTableEntry::Leaf(score) => *score,
         }
     }
 
     pub fn mark(&self) -> Result<Self, ()> {
         Ok(match self {
             TTableEntry::Node(depth, moves) => TTableEntry::Node(*depth, moves.marked()),
-            TTableEntry::Edge(depth, score) => TTableEntry::Edge(*depth, score_mark(*score)),
+            TTableEntry::Edge(score) => TTableEntry::Edge(score_mark(*score)),
+            TTableEntry::Leaf(score) => TTableEntry::Leaf(score_mark(*score)),
         })
     }
 
     pub fn depth(&self) -> Depth {
         match self {
             TTableEntry::Node(depth, ..) => *depth,
-            TTableEntry::Edge(depth, ..) => *depth,
+            TTableEntry::Edge(..) => DEPTH_EDGE,
+            TTableEntry::Leaf(..) => DEPTH_LEAF,
         }
     }
 
@@ -76,6 +52,7 @@ impl TTableEntry {
         match self {
             TTableEntry::Node(_, moves) => Some(*moves),
             TTableEntry::Edge(..) => None,
+            TTableEntry::Leaf(..) => None,
         }
     }
 
@@ -83,6 +60,7 @@ impl TTableEntry {
         match self {
             TTableEntry::Node(_, moves) => moves.peek(),
             TTableEntry::Edge(..) => None,
+            TTableEntry::Leaf(..) => None,
         }
     }
 }

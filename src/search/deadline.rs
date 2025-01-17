@@ -1,7 +1,5 @@
-use std::{
-    sync::atomic::{AtomicBool, Ordering},
-    time::Instant,
-};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Instant;
 
 use super::Depth;
 
@@ -16,7 +14,7 @@ impl Deadline {
         Deadline {
             deadline: None,
             trigger: AtomicBool::new(false),
-            max_depth: None
+            max_depth: None,
         }
     }
 
@@ -24,7 +22,7 @@ impl Deadline {
         Deadline {
             deadline: None,
             trigger: AtomicBool::new(false),
-            max_depth: Some(depth)
+            max_depth: Some(depth),
         }
     }
 
@@ -32,7 +30,7 @@ impl Deadline {
         Deadline {
             deadline: Some(Instant::now() + duration),
             trigger: AtomicBool::new(false),
-            max_depth: None
+            max_depth: None,
         }
     }
 

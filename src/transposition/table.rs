@@ -3,9 +3,12 @@ use std::{hash::Hash, mem::size_of, num::NonZeroUsize};
 use chess::Board;
 use lru::LruCache;
 
-use crate::search::{alpha_beta::AlphaBeta, Depth};
+use crate::search::alpha_beta::AlphaBeta;
+use crate::search::Depth;
 
-use super::{best_moves::BestMoves, pv_line::PVLine, table_entry::TTableEntry};
+use crate::transposition::best_moves::BestMoves;
+use crate::transposition::pv_line::PVLine;
+use crate::transposition::table_entry::TTableEntry;
 
 const ELEMENT_SIZE: usize = 11
     * (size_of::<*const Board>()
@@ -60,9 +63,7 @@ impl TTable {
         result: TTableEntry,
     ) {
         let key = (ttype, *board);
-        let entry = self.table
-            .get_or_insert_mut(key, || result)
-            .update(result);
+        let entry = self.table.get_or_insert_mut(key, || result).update(result);
 
         if PV {
             self.pv_table.put(key, *entry);
@@ -88,39 +89,27 @@ impl TTable {
     ) -> TTableSample {
         let mut pv = None;
 
-        if let Some(saved) = self.peek(Exact, board) {
+        if let Some(saved) = self.peek(Exact, board).cloned() {
             pv = pv.or(saved.moves());
-
             if depth <= saved.depth() {
-                let result = TTableSample::Score(*saved);
-                self.update::<PV>(Exact, board, *saved);
-                return result;
+                self.update::<PV>(Exact, board, saved);
+                return TTableSample::Score(saved);
             }
         }
 
-        if let Some(saved) = self.peek(Lower, board) {
+        if let Some(saved) = self.peek(Lower, board).cloned() {
             pv = pv.or(saved.moves());
-
-            if depth <= saved.depth() {
-                let score = saved.score();
-                if window.beta <= score {
-                    let result = TTableSample::Score(*saved);
-                    self.update::<PV>(Exact, board, *saved);
-                    return result;
-                }
+            if depth <= saved.depth() && window.beta <= saved.score() {
+                self.update::<PV>(Exact, board, saved);
+                return TTableSample::Score(saved);
             }
         }
 
-        if let Some(saved) = self.peek(Upper, board) {
+        if let Some(saved) = self.peek(Upper, board).cloned() {
             pv = pv.or(saved.moves());
-
-            if depth <= saved.depth() {
-                let score = saved.score();
-                if score <= window.alpha {
-                    let result = TTableSample::Score(*saved);
-                    self.update::<PV>(Exact, board, *saved);
-                    return result;
-                }
+            if depth <= saved.depth() && saved.score() <= window.alpha {
+                self.update::<PV>(Exact, board, saved);
+                return TTableSample::Score(saved);
             }
         }
 
@@ -133,7 +122,8 @@ impl TTable {
 
     pub fn promote_pv_line(&mut self, board: &Board) {
         for _move in self.get_pv_line(board) {
-            // This promotes the PV line to the front of the cache
+            // This loop promotes the PV line to the top
+            // of the cache just by iterating over it.
         }
     }
 

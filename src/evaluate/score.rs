@@ -33,8 +33,8 @@ pub fn score_to_str(score: Score) -> String {
     let score = score.abs();
 
     if score >= MATE_CUTOFF {
-        let diff = MATE - score;
-        let moves = (diff + 3 * MATE_MOVE / 2) / (2 * MATE_MOVE);
+        let diff = (MATE - score + MATE_MOVE / 2) / MATE_MOVE;
+        let moves = (diff + 1) / 2;
 
         format!("mate {}{}", side, moves)
     } else {

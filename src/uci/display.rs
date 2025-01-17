@@ -1,6 +1,13 @@
+use std::io::{self, Write};
 use std::time::Instant;
 
-use crate::{evaluate::score_to_str, search::{board_history::BoardHistory, engine::Engine}, uci::stdout_sync};
+use crate::evaluate::score_to_str;
+use crate::search::board_history::BoardHistory;
+use crate::search::engine::Engine;
+
+pub fn stdout_sync() {
+    let _ = io::stdout().flush();
+}
 
 #[macro_export]
 macro_rules! uci_token {

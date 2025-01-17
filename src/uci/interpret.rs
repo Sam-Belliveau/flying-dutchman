@@ -1,19 +1,16 @@
-use std::{
-    io::{self, BufRead},
-    str::FromStr,
-};
+use std::io::{self, BufRead};
+use std::str::FromStr;
 
 use chess::{Board, ChessMove};
 use logos::Logos;
 
-use crate::{search::board_history::BoardHistory, tests};
+use crate::uci::display::stdout_sync;
+use crate::uci::go_options::GoOptions;
+use crate::uci::thread::UCIThread;
+use crate::uci::tokens::UCIToken::{self, *};
 
-use super::{
-    go_options::GoOptions,
-    stdout_sync,
-    thread::UCIThread,
-    tokens::UCIToken::{self, *},
-};
+use crate::search::board_history::BoardHistory;
+use crate::tests;
 
 pub fn uci_loop() {
     let mut thread = UCIThread::new();
@@ -35,9 +32,7 @@ pub fn uci_loop() {
                     println!("id author Sam Belliveau");
                     println!("uciok");
                 }
-                Ok(NewGame) => {
-                    thread.reset()
-                }
+                Ok(NewGame) => thread.reset(),
                 Ok(IsReady) => {
                     // Respond to the isready command.
                     println!("readyok");

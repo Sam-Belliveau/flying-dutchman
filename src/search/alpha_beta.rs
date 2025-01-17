@@ -1,11 +1,10 @@
 use std::ops;
 
-use crate::{
-    evaluate::{Score, MATE},
-    transposition::table::TTableType,
-};
+use crate::evaluate::{Score, MATE};
 
-use super::Depth;
+use crate::transposition::table::TTableType;
+
+use crate::search::Depth;
 
 pub enum NegaMaxResult {
     Worse,

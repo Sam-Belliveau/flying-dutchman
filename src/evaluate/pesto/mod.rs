@@ -2,12 +2,12 @@ pub mod gamephase;
 pub mod phased_score;
 pub mod psq_table;
 
-use chess::{
-    Board,
-    Color::{Black, White},
-};
+use chess::Board;
+use chess::Color::{Black, White};
 
-use self::{gamephase::GamePhase, phased_score::PhasedScore, psq_table::PieceSquareTable};
+use crate::evaluate::pesto::gamephase::GamePhase;
+use crate::evaluate::pesto::phased_score::PhasedScore;
+use crate::evaluate::pesto::psq_table::PieceSquareTable;
 
 use super::{Score, CENTIPAWN};
 

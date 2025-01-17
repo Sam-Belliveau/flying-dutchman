@@ -1,13 +1,11 @@
 use std::time::Duration;
 
-use crate::search::Depth;
 use chess::{Board, Piece};
 use logos::Logos;
 
-use crate::{
-    search::deadline::Deadline,
-    uci::tokens::UCIGoToken::{self, *},
-};
+use crate::search::deadline::Deadline;
+use crate::search::Depth;
+use crate::uci::tokens::UCIGoToken::{self, *};
 
 const BUFFER: Duration = Duration::from_millis(250);
 

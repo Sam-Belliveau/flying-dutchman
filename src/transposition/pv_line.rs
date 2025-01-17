@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use chess::{Board, ChessMove};
 
-use super::table::{TTable, TTableType::*};
+use crate::transposition::table::{TTable, TTableType::*};
 
 pub struct PVLine<'a> {
     table: &'a mut TTable,

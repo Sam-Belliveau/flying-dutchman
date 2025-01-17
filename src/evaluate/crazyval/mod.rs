@@ -1,8 +1,8 @@
 use chess::{get_king_moves, BitBoard, Board, Color, MoveGen, Piece, EMPTY};
 
-use crate::evaluate::pesto::{gamephase::GamePhase, phased_score::PhasedScore};
-
-use super::{pesto, Score, CENTIPAWN};
+use crate::evaluate::pesto::gamephase::GamePhase;
+use crate::evaluate::pesto::phased_score::PhasedScore;
+use crate::evaluate::{pesto, Score, CENTIPAWN};
 
 // Value of attacking an enemy piece
 const ATTACK: Score = CENTIPAWN / 10;
@@ -36,14 +36,18 @@ fn evaluate_moves(board: &Board) -> Score {
                 Some(piece) => {
                     score += PhasedScore::from_piece(piece, sidemove) * ATTACK;
                     if near_king {
-                        score += PhasedScore::from_piece(piece, sidemove) * ATTACK * (NEAR_KING / CENTIPAWN);
+                        score += PhasedScore::from_piece(piece, sidemove)
+                            * ATTACK
+                            * (NEAR_KING / CENTIPAWN);
                     }
                 }
 
                 None => {
                     score += PhasedScore::from_piece(Piece::Pawn, sidemove) * HOLD;
                     if near_king {
-                        score += PhasedScore::from_piece(Piece::Pawn, sidemove) * HOLD * (NEAR_KING / CENTIPAWN);
+                        score += PhasedScore::from_piece(Piece::Pawn, sidemove)
+                            * HOLD
+                            * (NEAR_KING / CENTIPAWN);
                     }
                 }
             }

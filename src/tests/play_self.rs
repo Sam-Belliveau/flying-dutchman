@@ -2,11 +2,13 @@ use std::{io::Write, time::Duration};
 
 use chess::{Board, Color};
 
-use crate::{
-    evaluate::score_to_str,
-    search::{board_history::BoardHistory, deadline::Deadline, engine::Engine},
-    transposition::table_entry::TTableEntry,
-};
+use crate::evaluate::score_to_str;
+
+use crate::search::board_history::BoardHistory;
+use crate::search::deadline::Deadline;
+use crate::search::engine::Engine;
+
+use crate::transposition::table_entry::TTableEntry;
 
 fn print_result(title: &str, result: TTableEntry) {
     println!(

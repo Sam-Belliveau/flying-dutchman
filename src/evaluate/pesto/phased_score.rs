@@ -1,8 +1,7 @@
 use chess::{Color, Piece};
 
 use crate::evaluate::Score;
-
-use super::gamephase::GamePhase;
+use crate::evaluate::pesto::gamephase::GamePhase;
 
 #[derive(Clone, Copy, Debug)]
 pub struct RawPhasedScore {
