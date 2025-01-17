@@ -1,6 +1,9 @@
 use std::ops;
 
-use crate::evaluate::{Score, MATE};
+use crate::{
+    evaluate::{Score, MATE},
+    transposition::table::TTableType,
+};
 
 use super::Depth;
 
@@ -43,6 +46,16 @@ impl AlphaBeta {
             NegaMaxResult::Best
         } else {
             NegaMaxResult::Worse
+        }
+    }
+
+    pub fn table_entry_type(&self, score: Score) -> TTableType {
+        if score >= self.beta {
+            TTableType::Lower
+        } else if score <= self.alpha {
+            TTableType::Upper
+        } else {
+            TTableType::Exact
         }
     }
 

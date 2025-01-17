@@ -103,12 +103,14 @@ impl Engine {
 
         // Opponent Modeling to improve play against humans.
         let opponent_depth = 7;
-        if window.opponent() && depth > opponent_depth {
-            if let Some(opponent_engine) = &mut self.opponent_engine {
-                window.beta = MATE;
-                window.alpha = -MATE;
-                let opponent_eval =
-                    opponent_engine.ab_search::<PV>(board, opponent_depth, window, deadline)?;
+        if let Some(opponent_engine) = &mut self.opponent_engine {
+            if window.opponent() {
+                let opponent_eval = opponent_engine.ab_search::<PV>(
+                    board,
+                    depth.min(opponent_depth),
+                    AlphaBeta::new(),
+                    deadline,
+                )?;
 
                 if let Some(opponent_move) = opponent_eval.peek() {
                     let next = board.with_move(opponent_move);
@@ -121,7 +123,8 @@ impl Engine {
                         BestMoves::Best1(RatedMove::new(eval, opponent_move)),
                     );
 
-                    self.table.update::<PV>(Exact, board.last(), entry);
+                    let ttype = window.table_entry_type(eval);
+                    self.table.update::<PV>(ttype, board.last(), entry);
                     return draw.unwrap_or(entry).mark();
                 }
             }
@@ -135,7 +138,7 @@ impl Engine {
         };
 
         // Null Move Pruning
-        let r: Depth = 3;
+        let r: Depth = 2;
         if !PV && depth > r && !board.was_null_move() {
             if let Some(null_board) = board.last().null_move() {
                 let null_next = board.with_board(null_board);
@@ -191,9 +194,7 @@ impl Engine {
             };
 
             moves.push(RatedMove::new(eval, movement));
-
-            let score = moves.score();
-            if let Pruned = window.negamax(score) {
+            if let Pruned = window.negamax(eval) {
                 let entry = TTableEntry::new(depth, moves);
                 self.table.update::<PV>(Lower, board.last(), entry);
                 return draw.unwrap_or(entry).mark();
@@ -219,11 +220,7 @@ impl Engine {
 
         // Store and Return Results
         let entry = TTableEntry::new(depth, moves);
-        let ttype = if original_window.alpha < window.alpha {
-            Exact
-        } else {
-            Upper
-        };
+        let ttype = original_window.table_entry_type(moves.score());
 
         self.table.update::<PV>(ttype, board.last(), entry);
         draw.unwrap_or(entry).mark()
