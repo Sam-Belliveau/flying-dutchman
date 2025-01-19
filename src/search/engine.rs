@@ -18,6 +18,9 @@ use crate::transposition::table_entry::TTableEntry;
 
 const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
 
+const OPPONENT_EVAL_DEPTH: Depth = 7;
+const OPPONENT_EVAL_PLY: Depth = 0;
+
 pub struct Engine {
     pub table: TTable,
     pub opponent_engine: Option<Box<Engine>>,
@@ -97,12 +100,11 @@ impl Engine {
         }
 
         // Opponent Modeling to
-        let opponent_depth = 7;
         if let Some(opponent_engine) = &mut self.opponent_engine {
-            if window.opponent() && window.ply < 2 {
+            if window.ply < OPPONENT_EVAL_PLY && window.opponent() {
                 let opponent_eval = opponent_engine.ab_search::<PV>(
                     board,
-                    opponent_depth.min(depth),
+                    OPPONENT_EVAL_DEPTH.min(depth),
                     AlphaBeta::new(),
                     deadline,
                 )?;

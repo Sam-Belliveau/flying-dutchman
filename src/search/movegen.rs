@@ -3,7 +3,6 @@ use chess::{BitBoard, Board, ChessMove, MoveGen, EMPTY};
 use crate::transposition::best_moves::BestMoves;
 
 pub struct OrderedMoveGen {
-    pv: BestMoves,
     pv_iter: BestMoves,
     masks: std::array::IntoIter<BitBoard, 6>,
     move_gen: MoveGen,
@@ -17,7 +16,6 @@ impl OrderedMoveGen {
 
     pub fn full_search(board: &Board, pv: BestMoves) -> OrderedMoveGen {
         OrderedMoveGen {
-            pv,
             pv_iter: pv,
             masks: [
                 *board.pieces(chess::Piece::Queen),
@@ -35,7 +33,6 @@ impl OrderedMoveGen {
 
     pub fn quiescence_search(board: &Board, pv: BestMoves) -> OrderedMoveGen {
         OrderedMoveGen {
-            pv,
             pv_iter: pv,
             masks: [
                 *board.pieces(chess::Piece::Queen),
@@ -57,22 +54,15 @@ impl Iterator for OrderedMoveGen {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(pv) = self.pv_iter.pop() {
-            return Some(pv.mv);
-        }
-
-        if let Some(mv) = self.move_gen.next() {
-            if self.pv.contains(mv) {
-                return self.next();
-            } else {
-                return Some(mv);
-            }
-        }
-
-        if let Some(mask) = self.masks.next() {
+            self.move_gen.remove_move(pv.mv);
+            Some(pv.mv)
+        } else if let Some(mv) = self.move_gen.next() {
+            Some(mv)
+        } else if let Some(mask) = self.masks.next() {
             self.move_gen.set_iterator_mask(mask);
-            return self.next();
+            self.next()
+        } else {
+            None
         }
-
-        None
     }
 }
