@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use chess::{Board, ChessMove};
 
-use crate::transposition::table::{TTable, TTableType::*};
+use crate::transposition::table::TTable;
 
 pub struct PVLine<'a> {
     table: &'a mut TTable,
@@ -24,19 +24,14 @@ impl Iterator for PVLine<'_> {
     type Item = ChessMove;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(entry) = (self.table.get::<true>(Exact, &self.board))
-            .or_else(|| self.table.get::<true>(Lower, &self.board))
-            .or_else(|| self.table.get::<true>(Upper, &self.board))
-        {
-            if let Some(best_move) = entry.peek() {
-                if self.passed.insert(self.board) {
-                    self.board = self.board.make_move_new(best_move);
+        let entry = self.table.get::<true>(&self.board)?;
+        let best_move = entry.peek()?;
 
-                    return Some(best_move);
-                }
-            }
+        if self.passed.insert(self.board) {
+            self.board = self.board.make_move_new(best_move);
+            Some(best_move)
+        } else {
+            None
         }
-
-        None
     }
 }

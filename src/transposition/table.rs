@@ -1,4 +1,5 @@
-use std::{hash::Hash, mem::size_of, num::NonZeroUsize};
+use std::mem::size_of;
+use std::num::NonZeroUsize;
 
 use chess::Board;
 use lru::LruCache;
@@ -20,17 +21,11 @@ const ELEMENT_SIZE: usize = 11
 
 const PV_TABLE_SIZE: usize = 256;
 
-pub type TTableHashMap = LruCache<(TTableType, Board), TTableEntry>;
-pub type PVTableHashMap = LruCache<(TTableType, Board), TTableEntry>;
+use TTableEntry::*;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum TTableType {
-    Exact,
-    Lower,
-    Upper,
-}
-
-use TTableType::*;
+pub type TTableKey = u64;
+pub type TTableHashMap = LruCache<TTableKey, TTableEntry>;
+pub type PVTableHashMap = LruCache<TTableKey, TTableEntry>;
 
 pub enum TTableSample {
     None,
@@ -56,28 +51,30 @@ impl TTable {
             .resize(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap())
     }
 
-    pub fn update<const PV: bool>(
-        &mut self,
-        ttype: TTableType,
-        board: &Board,
-        result: TTableEntry,
-    ) {
-        let key = (ttype, *board);
-        let entry = self.table.get_or_insert_mut(key, || result).update(result);
+    fn to_key(board: &Board) -> TTableKey {
+        board.get_hash()
+    }
+
+    pub fn update<const PV: bool>(&mut self, board: &Board, result: TTableEntry) {
+        let key = Self::to_key(board);
+        let entry = self
+            .table
+            .get_or_insert_mut(key, || result)
+            .update(result);
 
         if PV {
             self.pv_table.put(key, *entry);
         }
     }
 
-    pub fn peek(&self, ttype: TTableType, board: &Board) -> Option<&TTableEntry> {
-        let key = (ttype, *board);
+    pub fn peek(&self, board: &Board) -> Option<&TTableEntry> {
+        let key = Self::to_key(board);
         self.table.peek(&key).or_else(|| self.pv_table.peek(&key))
     }
 
-    pub fn get<const PV: bool>(&mut self, ttype: TTableType, board: &Board) -> Option<TTableEntry> {
-        let entry = self.peek(ttype, board).cloned()?;
-        self.update::<PV>(ttype, board, entry);
+    pub fn get<const PV: bool>(&mut self, board: &Board) -> Option<TTableEntry> {
+        let entry = self.peek(board).cloned()?;
+        self.update::<PV>(board, entry);
         Some(entry)
     }
 
@@ -87,36 +84,40 @@ impl TTable {
         window: &AlphaBeta,
         depth: Depth,
     ) -> TTableSample {
-        let mut pv = None;
-
-        if let Some(saved) = self.peek(Exact, board).cloned() {
-            pv = pv.or(saved.moves());
-            if depth <= saved.depth() {
-                self.update::<PV>(Exact, board, saved);
-                return TTableSample::Score(saved);
+        match self.peek(board).cloned() {
+            Some(sample @ ExactNode(sample_depth, moves)) => {
+                if depth <= sample_depth {
+                    self.update::<PV>(board, sample);
+                    TTableSample::Score(sample)
+                } else {
+                    TTableSample::Moves(moves)
+                }
             }
-        }
-
-        if let Some(saved) = self.peek(Lower, board).cloned() {
-            pv = pv.or(saved.moves());
-            if depth <= saved.depth() && window.beta <= saved.score() {
-                self.update::<PV>(Lower, board, saved);
-                return TTableSample::Score(saved);
+            Some(sample @ LowerNode(sample_depth, moves)) => {
+                if depth <= sample_depth && window.beta <= moves.score() {
+                    self.update::<PV>(board, sample);
+                    TTableSample::Score(sample)
+                } else {
+                    TTableSample::Moves(moves)
+                }
             }
-        }
-
-        if let Some(saved) = self.peek(Upper, board).cloned() {
-            pv = pv.or(saved.moves());
-            if depth <= saved.depth() && saved.score() <= window.alpha {
-                self.update::<PV>(Upper, board, saved);
-                return TTableSample::Score(saved);
+            Some(sample @ UpperNode(sample_depth, moves)) => {
+                if depth <= sample_depth && moves.score() <= window.alpha {
+                    self.update::<PV>(board, sample);
+                    TTableSample::Score(sample)
+                } else {
+                    TTableSample::Moves(moves)
+                }
             }
-        }
-
-        if let Some(moves) = pv {
-            TTableSample::Moves(moves)
-        } else {
-            TTableSample::None
+            Some(sample @ Edge(..)) => TTableSample::Score(sample),
+            Some(sample @ Leaf(..)) => {
+                if depth <= 0 {
+                    TTableSample::Score(sample)
+                } else {
+                    TTableSample::None
+                }
+            }
+            None => TTableSample::None,
         }
     }
 

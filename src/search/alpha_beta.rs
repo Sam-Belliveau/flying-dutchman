@@ -1,10 +1,9 @@
 use std::ops;
 
-use crate::evaluate::{Score, MATE};
-
-use crate::transposition::table::TTableType;
-
+use crate::evaluate::{Score, CENTIPAWN, MATE};
 use crate::search::Depth;
+use crate::transposition::best_moves::BestMoves;
+use crate::transposition::table_entry::TTableEntry;
 
 pub enum NegaMaxResult {
     Worse,
@@ -22,8 +21,8 @@ pub struct AlphaBeta {
 impl AlphaBeta {
     pub fn new() -> Self {
         Self {
-            alpha: -MATE,
-            beta: MATE,
+            alpha: -MATE - CENTIPAWN,
+            beta: MATE + CENTIPAWN,
             ply: 0,
         }
     }
@@ -48,13 +47,15 @@ impl AlphaBeta {
         }
     }
 
-    pub fn table_entry_type(&self, score: Score) -> TTableType {
+    pub fn new_table_entry(&self, depth: Depth, moves: BestMoves) -> TTableEntry {
+        let score = moves.score();
+
         if score >= self.beta {
-            TTableType::Lower
+            TTableEntry::LowerNode(depth, moves)
         } else if score <= self.alpha {
-            TTableType::Upper
+            TTableEntry::UpperNode(depth, moves)
         } else {
-            TTableType::Exact
+            TTableEntry::ExactNode(depth, moves)
         }
     }
 

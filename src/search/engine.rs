@@ -13,12 +13,12 @@ use crate::search::Depth;
 use crate::transposition::best_moves::BestMoves;
 use crate::transposition::pv_line::PVLine;
 use crate::transposition::rated_move::RatedMove;
-use crate::transposition::table::{TTable, TTableSample, TTableType::*};
+use crate::transposition::table::{TTable, TTableSample};
 use crate::transposition::table_entry::TTableEntry;
 
 const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
 
-const OPPONENT_EVAL_DEPTH: Depth = 7;
+const OPPONENT_EVAL_DEPTH: Depth = 0;
 const OPPONENT_EVAL_PLY: Depth = 0;
 
 pub struct Engine {
@@ -40,16 +40,12 @@ impl Engine {
         }
     }
 
-    fn wrap(score: Score) -> Result<Score, ()> {
-        Ok(score_mark(score))
-    }
-
-    pub fn ab_qsearch(board: &Board, mut window: AlphaBeta) -> Result<Score, ()> {
+    pub fn ab_qsearch(board: &Board, mut window: AlphaBeta) -> Score {
         let (mut best, movegen) = {
             if *board.checkers() == EMPTY {
                 let score = evaluate(&board);
                 if let Pruned = window.negamax(score) {
-                    return Self::wrap(score);
+                    return score_mark(score);
                 }
 
                 (
@@ -63,15 +59,15 @@ impl Engine {
 
         for movement in movegen {
             let new_board = board.make_move_new(movement);
-            let eval = -Self::ab_qsearch(&new_board, -window)?;
+            let eval = -Self::ab_qsearch(&new_board, -window);
 
             best = best.max(eval);
             if let Pruned = window.negamax(eval) {
-                return Self::wrap(best);
+                break;
             }
         }
 
-        Self::wrap(best)
+        score_mark(best)
     }
 
     fn ab_search<const PV: bool>(
@@ -96,7 +92,7 @@ impl Engine {
 
         // Quiescence Search
         if depth <= 0 {
-            return TTableEntry::Leaf(Self::ab_qsearch(board.last(), window)?).mark();
+            return TTableEntry::Leaf(Self::ab_qsearch(board.last(), window)).mark();
         }
 
         // Opponent Modeling to
@@ -115,13 +111,12 @@ impl Engine {
                         .ab_search::<PV>(&next, depth - 1, -window, deadline)?
                         .score();
 
-                    let entry = TTableEntry::Node(
+                    let entry = window.new_table_entry(
                         depth,
                         BestMoves::Best1(RatedMove::new(eval, opponent_move)),
                     );
 
-                    let ttype = window.table_entry_type(eval);
-                    self.table.update::<PV>(ttype, board.last(), entry);
+                    self.table.update::<PV>(board.last(), entry);
                     return entry.mark();
                 }
             }
@@ -190,8 +185,8 @@ impl Engine {
 
             moves.push(RatedMove::new(eval, movement));
             if let Pruned = window.negamax(eval) {
-                let entry = TTableEntry::Node(depth, moves);
-                self.table.update::<PV>(Lower, board.last(), entry);
+                let entry = TTableEntry::LowerNode(depth, moves);
+                self.table.update::<PV>(board.last(), entry);
                 return entry.mark();
             }
         }
@@ -209,15 +204,13 @@ impl Engine {
             };
 
             let entry = TTableEntry::Edge(eval);
-            self.table.update::<PV>(Exact, board.last(), entry);
+            self.table.update::<PV>(board.last(), entry);
             return entry.mark();
         }
 
         // Store and Return Results
-        let entry = TTableEntry::Node(depth, moves);
-        let ttype = original_window.table_entry_type(moves.score());
-
-        self.table.update::<PV>(ttype, board.last(), entry);
+        let entry = original_window.new_table_entry(depth, moves);
+        self.table.update::<PV>(board.last(), entry);
         entry.mark()
     }
 
