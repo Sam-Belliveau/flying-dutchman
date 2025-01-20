@@ -100,7 +100,7 @@ impl TTable {
         if let Some(saved) = self.peek(Lower, board).cloned() {
             pv = pv.or(saved.moves());
             if depth <= saved.depth() && window.beta <= saved.score() {
-                self.update::<PV>(Exact, board, saved);
+                self.update::<PV>(Lower, board, saved);
                 return TTableSample::Score(saved);
             }
         }
@@ -108,7 +108,7 @@ impl TTable {
         if let Some(saved) = self.peek(Upper, board).cloned() {
             pv = pv.or(saved.moves());
             if depth <= saved.depth() && saved.score() <= window.alpha {
-                self.update::<PV>(Exact, board, saved);
+                self.update::<PV>(Upper, board, saved);
                 return TTableSample::Score(saved);
             }
         }
