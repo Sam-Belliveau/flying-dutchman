@@ -105,9 +105,13 @@ impl TTable {
                     TTableSample::Moves(moves)
                 }
             }
-            Some(sample @ Edge(..)) => TTableSample::Score(sample),
+            Some(sample @ Edge(..)) => {
+                self.update::<PV>(board, sample);
+                TTableSample::Score(sample)
+            }
             Some(sample @ Leaf(..)) => {
                 if depth <= 0 {
+                    self.update::<PV>(board, sample);
                     TTableSample::Score(sample)
                 } else {
                     TTableSample::None
