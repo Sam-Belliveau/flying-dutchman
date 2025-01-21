@@ -11,19 +11,17 @@ use crate::transposition::best_moves::BestMoves;
 use crate::transposition::pv_line::PVLine;
 use crate::transposition::table_entry::TTableEntry;
 
-const ELEMENT_SIZE: usize = 11
-    * (size_of::<*const Board>()
-        + size_of::<Board>()
-        + size_of::<TTableEntry>()
-        + 2 * size_of::<*const u64>()
-        + size_of::<u64>())
-    / 10;
+const ELEMENT_SIZE: usize = size_of::<*const TTableKey>()
+    + size_of::<TTableKey>()
+    + size_of::<TTableEntry>()
+    + 2 * size_of::<*const u64>()
+    + size_of::<u64>();
 
 const PV_TABLE_SIZE: usize = 256;
 
 use TTableEntry::*;
 
-pub type TTableKey = u64;
+pub type TTableKey = Board;
 pub type TTableHashMap = LruCache<TTableKey, TTableEntry>;
 pub type PVTableHashMap = LruCache<TTableKey, TTableEntry>;
 
@@ -51,16 +49,14 @@ impl TTable {
             .resize(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap())
     }
 
+    #[inline]
     fn to_key(board: &Board) -> TTableKey {
-        board.get_hash()
+        *board
     }
 
     pub fn update<const PV: bool>(&mut self, board: &Board, result: TTableEntry) {
         let key = Self::to_key(board);
-        let entry = self
-            .table
-            .get_or_insert_mut(key, || result)
-            .update(result);
+        let entry = self.table.get_or_insert_mut(key, || result).update(result);
 
         if PV {
             self.pv_table.put(key, *entry);
