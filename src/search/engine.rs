@@ -18,8 +18,8 @@ use crate::transposition::table_entry::TTableEntry;
 
 const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
 
-const OPPONENT_EVAL_DEPTH: Depth = 0;
-const OPPONENT_EVAL_PLY: Depth = 0;
+const OPPONENT_EVAL_DEPTH: Depth = 1;
+const OPPONENT_EVAL_PLY: Depth = 2;
 
 pub struct Engine {
     pub table: TTable,

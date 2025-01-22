@@ -15,14 +15,6 @@ pub enum TTableEntry {
 }
 
 impl TTableEntry {
-    pub fn update(&mut self, result: TTableEntry) -> &mut Self {
-        if *self <= result {
-            *self = result;
-        }
-
-        self
-    }
-
     pub fn score(&self) -> Score {
         match self {
             TTableEntry::ExactNode(_, moves) => moves.score(),
@@ -61,35 +53,5 @@ impl TTableEntry {
             TTableEntry::Edge(..) => None,
             TTableEntry::Leaf(..) => None,
         }
-    }
-}
-
-impl TTableEntry {
-    fn bound_order(&self) -> u8 {
-        match self {
-            TTableEntry::Edge(..) => 4,
-
-            TTableEntry::ExactNode(..) => 3,
-            TTableEntry::Leaf(..) => 2,
-
-            TTableEntry::LowerNode(..) => 1,
-            TTableEntry::UpperNode(..) => 0,
-        }
-    }
-}
-
-impl PartialOrd for TTableEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for TTableEntry {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let bound_cmp = self.bound_order().cmp(&other.bound_order());
-        let depth_cmp = || self.depth().cmp(&other.depth());
-        let score_cmp = || self.score().cmp(&other.score());
-
-        bound_cmp.then_with(depth_cmp).then_with(score_cmp)
     }
 }
