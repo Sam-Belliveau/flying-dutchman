@@ -130,7 +130,7 @@ impl Engine {
         };
 
         // Null Move Pruning
-        let r: Depth = 2;
+        let r: Depth = 3;
         if !PV && depth > r {
             if let Some(null_board) = board.with_null_move() {
                 let null_eval = -self

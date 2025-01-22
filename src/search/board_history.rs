@@ -47,10 +47,12 @@ impl BoardHistory {
     pub fn is_draw(&self) -> bool {
         let mut matches: i32 = 0;
         let mut boards = self.history.iter();
-        
-        if let Some(last) = boards.next() {
+
+        if let Some(last_board) = boards.next() {
             for board in boards {
-                matches += (*last == *board) as i32;
+                if last_board == board {
+                    matches += 1;
+                }
             }
         }
 
