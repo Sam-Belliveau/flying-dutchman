@@ -131,7 +131,7 @@ impl Engine {
 
         // Null Move Pruning
         let r: Depth = 3;
-        if !PV && depth > r {
+        if !PV && depth > r && window.span() > 1 {
             if let Some(null_board) = board.with_null_move() {
                 let null_eval = -self
                     .ab_search::<false>(&null_board, depth - r, window.null_move(), deadline)?

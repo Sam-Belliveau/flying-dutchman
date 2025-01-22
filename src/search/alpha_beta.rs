@@ -62,6 +62,10 @@ impl AlphaBeta {
     pub fn opponent(&self) -> bool {
         self.ply % 2 == 1
     }
+
+    pub fn span(&self) -> Score {
+        self.beta - self.alpha
+    }
 }
 
 impl ops::Neg for AlphaBeta {
