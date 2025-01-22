@@ -44,7 +44,7 @@ impl TTable {
     pub fn new(table_size: usize) -> TTable {
         TTable {
             table: TTableHashMap::with_hasher(
-                NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap(),
+                NonZeroUsize::new((table_size / ELEMENT_SIZE - 1).next_power_of_two()).unwrap(),
                 TableHashBuilder::default(),
             ),
             pv_table: PVTableHashMap::with_hasher(
@@ -66,10 +66,11 @@ impl TTable {
 
     pub fn update<const PV: bool>(&mut self, board: &Board, result: TTableEntry) {
         let key = Self::to_key(board);
-        self.table.put(key, result);
-
         if PV {
+            self.table.put(key, result);
             self.pv_table.put(key, result);
+        } else {
+            self.table.put(key, result);
         }
     }
 
@@ -89,15 +90,10 @@ impl TTable {
         window: &AlphaBeta,
         depth: Depth,
     ) -> TTableSample {
-        let key = Self::to_key(board);
         match self.peek(board).cloned() {
             Some(sample @ ExactNode(sample_depth, moves)) => {
                 if depth <= sample_depth {
-                    self.table.promote(&key);
-                    if PV {
-                        self.pv_table.put(key, sample);
-                    }
-
+                    self.update::<PV>(board, sample);
                     TTableSample::Score(sample)
                 } else {
                     TTableSample::Moves(moves)
@@ -105,11 +101,7 @@ impl TTable {
             }
             Some(sample @ LowerNode(sample_depth, moves)) => {
                 if depth <= sample_depth && window.beta <= moves.score() {
-                    self.table.promote(&key);
-                    if PV {
-                        self.pv_table.put(key, sample);
-                    }
-
+                    self.update::<PV>(board, sample);
                     TTableSample::Score(sample)
                 } else {
                     TTableSample::Moves(moves)
@@ -117,31 +109,19 @@ impl TTable {
             }
             Some(sample @ UpperNode(sample_depth, moves)) => {
                 if depth <= sample_depth && moves.score() <= window.alpha {
-                    self.table.promote(&key);
-                    if PV {
-                        self.pv_table.put(key, sample);
-                    }
-
+                    self.update::<PV>(board, sample);
                     TTableSample::Score(sample)
                 } else {
                     TTableSample::Moves(moves)
                 }
             }
             Some(sample @ Edge(..)) => {
-                self.table.promote(&key);
-                if PV {
-                    self.pv_table.put(key, sample);
-                }
-
+                self.update::<PV>(board, sample);
                 TTableSample::Score(sample)
             }
             Some(sample @ Leaf(..)) => {
                 if depth <= 0 {
-                    self.table.promote(&key);
-                    if PV {
-                        self.pv_table.put(key, sample);
-                    }
-
+                    self.update::<PV>(board, sample);
                     TTableSample::Score(sample)
                 } else {
                     TTableSample::None
