@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use chess::{Board, ChessMove, EMPTY};
 
-use crate::evaluate::{evaluate, score_mark, Score, DRAW, MATE};
+use crate::evaluate::{evaluate, score_mark, Score, DRAW, MATE, MATE_CUTOFF};
 
 use crate::search::alpha_beta::{AlphaBeta, NegaMaxResult::*};
 use crate::search::board_history::BoardHistory;
@@ -131,7 +131,7 @@ impl Engine {
 
         // Null Move Pruning
         let r: Depth = 3;
-        if !PV && depth > r && window.span() > 1 {
+        if !PV && depth > r && window.span() > 1 && window.beta < MATE_CUTOFF {
             if let Some(null_board) = board.with_null_move() {
                 let null_eval = -self
                     .ab_search::<false>(&null_board, depth - r, window.null_move(), deadline)?
