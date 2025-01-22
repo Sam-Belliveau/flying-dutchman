@@ -3,6 +3,7 @@ use std::num::NonZeroUsize;
 
 use chess::Board;
 use lru::LruCache;
+use nohash_hasher::BuildNoHashHasher;
 
 use crate::search::alpha_beta::AlphaBeta;
 use crate::search::Depth;
@@ -22,8 +23,11 @@ const PV_TABLE_SIZE: usize = 256;
 use TTableEntry::*;
 
 pub type TTableKey = u64;
-pub type TTableHashMap = LruCache<TTableKey, TTableEntry>;
-pub type PVTableHashMap = LruCache<TTableKey, TTableEntry>;
+
+pub type TableHashBuilder = BuildNoHashHasher<u64>;
+
+pub type TTableHashMap = LruCache<TTableKey, TTableEntry, TableHashBuilder>;
+pub type PVTableHashMap = LruCache<TTableKey, TTableEntry, TableHashBuilder>;
 
 pub enum TTableSample {
     None,
@@ -39,8 +43,14 @@ pub struct TTable {
 impl TTable {
     pub fn new(table_size: usize) -> TTable {
         TTable {
-            table: TTableHashMap::new(NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap()),
-            pv_table: PVTableHashMap::new(NonZeroUsize::new(PV_TABLE_SIZE).unwrap()),
+            table: TTableHashMap::with_hasher(
+                NonZeroUsize::new(table_size / ELEMENT_SIZE).unwrap(),
+                TableHashBuilder::default(),
+            ),
+            pv_table: PVTableHashMap::with_hasher(
+                NonZeroUsize::new(PV_TABLE_SIZE).unwrap(),
+                TableHashBuilder::default(),
+            ),
         }
     }
 
