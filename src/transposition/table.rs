@@ -22,7 +22,7 @@ const PV_TABLE_SIZE: usize = 256;
 
 use TTableEntry::*;
 
-pub type TTableKey = u64;
+pub type TTableKey = Board;
 
 pub type TableHashBuilder = BuildNoHashHasher<u64>;
 
@@ -61,7 +61,7 @@ impl TTable {
 
     #[inline]
     fn to_key(board: &Board) -> TTableKey {
-        board.get_hash()
+        *board
     }
 
     pub fn update<const PV: bool>(&mut self, board: &Board, result: TTableEntry) {
