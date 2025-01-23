@@ -18,11 +18,11 @@ const ELEMENT_SIZE: usize = size_of::<*const TTableKey>()
     + 2 * size_of::<*const u64>()
     + size_of::<u64>();
 
-const PV_TABLE_SIZE: usize = 256;
+const PV_TABLE_SIZE: usize = 1024;
 
 use TTableEntry::*;
 
-pub type TTableKey = Board;
+pub type TTableKey = u64;
 
 pub type TableHashBuilder = BuildNoHashHasher<u64>;
 
@@ -61,7 +61,7 @@ impl TTable {
 
     #[inline]
     fn to_key(board: &Board) -> TTableKey {
-        *board
+        board.get_hash()
     }
 
     pub fn update<const PV: bool>(&mut self, board: &Board, result: TTableEntry) {
@@ -113,6 +113,14 @@ impl TTable {
                     TTableSample::Score(sample)
                 } else {
                     TTableSample::Moves(moves)
+                }
+            }
+            Some(sample @ NullCut(sample_depth, score)) => {
+                if depth <= sample_depth && window.beta <= score {
+                    self.update::<PV>(board, sample);
+                    TTableSample::Score(sample)
+                } else {
+                    TTableSample::None
                 }
             }
             Some(sample @ Edge(..)) => {

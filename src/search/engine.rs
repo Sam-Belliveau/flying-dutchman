@@ -92,7 +92,9 @@ impl Engine {
 
         // Quiescence Search
         if depth <= 0 {
-            return TTableEntry::Leaf(Self::ab_qsearch(board.last(), window)).mark();
+            let eval = Self::ab_qsearch(board.last(), window);
+            let entry = TTableEntry::Leaf(eval);
+            return entry.mark();
         }
 
         // Opponent Modeling to
@@ -106,18 +108,21 @@ impl Engine {
                 )?;
 
                 if let Some(opponent_move) = opponent_eval.peek() {
+                    let mut moves = BestMoves::new();
+
                     let next = board.with_move(opponent_move);
                     let eval = -self
                         .ab_search::<PV>(&next, depth - 1, -window, deadline)?
                         .score();
 
-                    let entry = window.new_table_entry(
-                        depth,
-                        BestMoves::Best1(RatedMove::new(eval, opponent_move)),
-                    );
+                    moves.push(RatedMove::new(eval, opponent_move));
 
+                    let entry = original_window.new_table_entry(depth, moves);
                     self.table.update::<PV>(board.last(), entry);
                     return entry.mark();
+                } else {
+                    self.table.update::<PV>(board.last(), opponent_eval);
+                    return Ok(opponent_eval);
                 }
             }
         }
@@ -128,7 +133,22 @@ impl Engine {
             TTableSample::Score(score) => return score.mark(),
             TTableSample::None => BestMoves::new(),
         };
-        
+
+        // Null Move Pruning
+        let r: Depth = 2;
+        if !PV && depth > r && window.span() > 1 && window.beta < MATE_CUTOFF {
+            if let Some(null_board) = board.with_null_move() {
+                let null_eval = -self
+                    .ab_search::<false>(&null_board, depth - r - 1, window.null_move(), deadline)?
+                    .score();
+
+                if null_eval >= window.beta {
+                    let entry = TTableEntry::NullCut(depth, null_eval);
+                    return entry.mark();
+                }
+            }
+        }
+
         // Normal Alpha Beta Search
         let check = *board.last().checkers() != EMPTY;
 
@@ -142,7 +162,7 @@ impl Engine {
                     .score()
             } else {
                 let reduction =
-                    if depth < 3 || move_count < 4 || check || *next.last().checkers() != EMPTY {
+                    if depth < 3 || move_count <= 3 || check || *next.last().checkers() != EMPTY {
                         0
                     } else if movement.get_promotion().is_some()
                         || board.last().piece_on(movement.get_dest()).is_some()
@@ -170,9 +190,7 @@ impl Engine {
 
             moves.push(RatedMove::new(eval, movement));
             if let Pruned = window.negamax(eval) {
-                let entry = TTableEntry::LowerNode(depth, moves);
-                self.table.update::<PV>(board.last(), entry);
-                return entry.mark();
+                break;
             }
         }
 
