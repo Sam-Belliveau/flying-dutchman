@@ -16,14 +16,13 @@ use crate::transposition::rated_move::RatedMove;
 use crate::transposition::table::{TTable, TTableSample};
 use crate::transposition::table_entry::TTableEntry;
 
-const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
+use super::opponent_engine::OpponentEngine;
 
-const OPPONENT_EVAL_DEPTH: Depth = 1;
+const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
 const OPPONENT_EVAL_PLY: Depth = 2;
 
 pub struct Engine {
     pub table: TTable,
-    pub opponent_engine: Option<Box<Engine>>,
     nodes: usize,
 }
 
@@ -31,11 +30,6 @@ impl Engine {
     pub fn new() -> Engine {
         Engine {
             table: TTable::new(DEFAULT_TABLE_SIZE),
-            opponent_engine: Some(Box::new(Engine {
-                table: TTable::new(DEFAULT_TABLE_SIZE),
-                opponent_engine: None,
-                nodes: 0,
-            })),
             nodes: 0,
         }
     }
@@ -76,6 +70,7 @@ impl Engine {
         depth: Depth,
         mut window: AlphaBeta,
         deadline: &Deadline,
+        opponent_engine: &mut Option<OpponentEngine>,
     ) -> Result<TTableEntry, ()> {
         let original_window = window;
         self.nodes += 1;
@@ -98,31 +93,32 @@ impl Engine {
         }
 
         // Opponent Modeling to
-        if let Some(opponent_engine) = &mut self.opponent_engine {
-            if window.ply < OPPONENT_EVAL_PLY && window.opponent() {
-                let opponent_eval = opponent_engine.ab_search::<PV>(
-                    board,
-                    OPPONENT_EVAL_DEPTH.min(depth),
-                    AlphaBeta::new(),
-                    deadline,
-                )?;
+        if window.ply < OPPONENT_EVAL_PLY && window.opponent() {
+            if let Some(opponent) = opponent_engine {
+                match opponent.get_move(board.last(), deadline) {
+                    Ok(opponent_move) => {
+                        let mut moves = BestMoves::new();
 
-                if let Some(opponent_move) = opponent_eval.peek() {
-                    let mut moves = BestMoves::new();
+                        let next = board.with_move(opponent_move);
+                        let eval = -self
+                            .ab_search::<PV>(
+                                &next,
+                                depth - 1,
+                                -window,
+                                deadline,
+                                opponent_engine,
+                            )?
+                            .score();
 
-                    let next = board.with_move(opponent_move);
-                    let eval = -self
-                        .ab_search::<PV>(&next, depth - 1, -window, deadline)?
-                        .score();
+                        moves.push(RatedMove::new(eval, opponent_move));
 
-                    moves.push(RatedMove::new(eval, opponent_move));
-
-                    let entry = original_window.new_table_entry(depth, moves);
-                    self.table.update::<PV>(board.last(), entry);
-                    return entry.mark();
-                } else {
-                    self.table.update::<PV>(board.last(), opponent_eval);
-                    return Ok(opponent_eval);
+                        let entry = original_window.new_table_entry(depth, moves);
+                        self.table.update::<PV>(board.last(), entry);
+                        return entry.mark();
+                    },
+                    Err(error) => {
+                        eprintln!("Opponent Engine Error: {}", error);
+                    },
                 }
             }
         }
@@ -139,7 +135,13 @@ impl Engine {
         if !PV && depth > r && window.span() > 1 && window.beta < MATE_CUTOFF {
             if let Some(null_board) = board.with_null_move() {
                 let null_eval = -self
-                    .ab_search::<false>(&null_board, depth - r - 1, window.null_move(), deadline)?
+                    .ab_search::<false>(
+                        &null_board,
+                        depth - r - 1,
+                        window.null_move(),
+                        deadline,
+                        opponent_engine,
+                    )?
                     .score();
 
                 if null_eval >= window.beta {
@@ -158,7 +160,7 @@ impl Engine {
 
             let eval = if PV && move_count == 0 {
                 -self
-                    .ab_search::<PV>(&next, depth - 1, -window, deadline)?
+                    .ab_search::<PV>(&next, depth - 1, -window, deadline, opponent_engine)?
                     .score()
             } else {
                 let reduction =
@@ -176,12 +178,18 @@ impl Engine {
                     .clamp(0, depth - 1);
 
                 let eval = -self
-                    .ab_search::<false>(&next, depth - reduction - 1, -window, deadline)?
+                    .ab_search::<false>(
+                        &next,
+                        depth - reduction - 1,
+                        -window,
+                        deadline,
+                        opponent_engine,
+                    )?
                     .score();
 
                 if 0 < reduction && window.alpha < eval {
                     -self
-                        .ab_search::<false>(&next, depth - 1, -window, deadline)?
+                        .ab_search::<false>(&next, depth - 1, -window, deadline, opponent_engine)?
                         .score()
                 } else {
                     eval
@@ -219,7 +227,7 @@ impl Engine {
 
     pub fn min_search(&mut self, history: &BoardHistory) -> TTableEntry {
         return self
-            .ab_search::<false>(&history, 1, AlphaBeta::new(), &Deadline::none())
+            .ab_search::<false>(&history, 1, AlphaBeta::new(), &Deadline::none(), &mut None)
             .expect("Expected Complete Search");
     }
 
@@ -231,6 +239,7 @@ impl Engine {
         &mut self,
         history: &BoardHistory,
         deadline: &Deadline,
+        opponent_engine: &mut Option<OpponentEngine>,
     ) -> Result<TTableEntry, ()> {
         let depth = match self.min_search(&history) {
             TTableEntry::Edge(..) => return Err(()),
@@ -241,7 +250,13 @@ impl Engine {
             return Err(());
         }
 
-        let result = self.ab_search::<true>(&history, depth + 1, AlphaBeta::new(), deadline);
+        let result = self.ab_search::<true>(
+            &history,
+            depth + 1,
+            AlphaBeta::new(),
+            deadline,
+            opponent_engine,
+        );
         self.table.promote_pv_line(history.last());
 
         if let Ok(score) = result {
@@ -258,19 +273,11 @@ impl Engine {
     pub fn start_new_search(&mut self) -> Instant {
         self.nodes = 0;
 
-        if let Some(opponent_engine) = &mut self.opponent_engine {
-            opponent_engine.start_new_search();
-        }
-
         Instant::now()
     }
 
     pub fn get_node_count(&self) -> usize {
-        if let Some(opponent_engine) = &self.opponent_engine {
-            self.nodes + opponent_engine.get_node_count()
-        } else {
-            self.nodes
-        }
+        self.nodes
     }
 
     pub fn memory_bytes(&self) -> usize {

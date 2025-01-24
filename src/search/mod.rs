@@ -3,6 +3,7 @@ pub mod board_history;
 pub mod deadline;
 pub mod engine;
 pub mod movegen;
+pub mod opponent_engine;
 
 pub type Depth = i64;
 

@@ -47,7 +47,7 @@ pub fn play_self() {
         print_result("Init   ", engine.min_search(&board));
         let mut rep = 0;
         let mut presult = None;
-        while let Ok(result) = engine.iterative_deepening_search(&board, &deadline) {
+        while let Ok(result) = engine.iterative_deepening_search(&board, &deadline, &mut None) {
             print_result("Iter   ", engine.min_search(&board));
 
             if presult == Some(result) {
