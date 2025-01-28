@@ -92,7 +92,7 @@ impl Engine {
         }
 
         // Opponent Modeling to
-        if PV && window.opponent() {
+        if (PV || window.ply < 2) && window.opponent() {
             if let Some(opponent) = opponent_engine {
                 match opponent.get_move(board, deadline) {
                     Ok(opponent_move) => {
