@@ -7,10 +7,12 @@ use std::{
     str::FromStr,
 };
 
-use chess::{Board, ChessMove};
+use chess::ChessMove;
 use lru::LruCache;
 
 use crate::search::deadline::Deadline;
+
+use super::board_history::BoardHistory;
 
 const OPPONENT_CACHE_SIZE: usize = 1000 * 1000;
 
@@ -67,7 +69,7 @@ pub struct OpponentEngine {
     /// A buffered reader for the child process's stdout.
     stdout_reader: BufReader<ChildStdout>,
     /// Cache of boards and their best moves.
-    cached: LruCache<Board, ChessMove>,
+    cached: LruCache<BoardHistory, ChessMove>,
 }
 
 impl OpponentEngine {
@@ -118,7 +120,7 @@ impl OpponentEngine {
     /// Get a move from the engine, checking our cache first.
     pub fn get_move(
         &mut self,
-        board: &Board,
+        board: &BoardHistory,
         deadline: &Deadline,
     ) -> Result<ChessMove, OpponentEngineError> {
         // Check the cache
@@ -138,11 +140,12 @@ impl OpponentEngine {
     /// Returns a move by querying the engine (no cache).
     fn uncached_get_move(
         &mut self,
-        board: &Board,
+        board: &BoardHistory,
         deadline: &Deadline,
     ) -> Result<ChessMove, OpponentEngineError> {
         // Send position command and then "go nodes 1"
-        let command = format!("position fen {}\ngo nodes 1\n", board);
+        let command = format!("{}\ngo nodes 1\n", board.to_uci_position());
+        println!("{}", command);
         let last_line = self.command_and_wait_for(&command, "bestmove", deadline)?;
 
         // Typically "bestmove e2e4"
@@ -155,7 +158,7 @@ impl OpponentEngine {
         let movement = ChessMove::from_str(move_str)
             .map_err(|_| OpponentEngineError::InvalidMoveFormat(move_str.to_string()))?;
 
-        if board.legal(movement) {
+        if board.last().legal(movement) {
             Ok(movement)
         } else {
             Err(OpponentEngineError::InvalidMoveFormat(move_str.to_string()))
