@@ -145,7 +145,6 @@ impl OpponentEngine {
     ) -> Result<ChessMove, OpponentEngineError> {
         // Send position command and then "go nodes 1"
         let command = format!("{}\ngo nodes 1\n", board.to_uci_position());
-        println!("{}", command);
         let last_line = self.command_and_wait_for(&command, "bestmove", deadline)?;
 
         // Typically "bestmove e2e4"
