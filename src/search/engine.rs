@@ -124,27 +124,6 @@ impl Engine {
             TTableSample::None => BestMoves::new(),
         };
 
-        // Null Move Pruning
-        let r: Depth = 2;
-        if !PV && depth > r && window.span() > 1 && window.beta < MATE_CUTOFF {
-            if let Some(null_board) = board.with_null_move() {
-                let null_eval = -self
-                    .ab_search::<false>(
-                        &null_board,
-                        depth - r - 1,
-                        window.null_move(),
-                        deadline,
-                        opponent_engine,
-                    )?
-                    .score();
-
-                if null_eval >= window.beta {
-                    let entry = TTableEntry::NullCut(depth, null_eval);
-                    return entry.mark();
-                }
-            }
-        }
-
         // Normal Alpha Beta Search
         let check = *board.last().checkers() != EMPTY;
 

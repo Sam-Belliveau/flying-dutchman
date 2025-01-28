@@ -3,7 +3,7 @@ use circular_buffer::CircularBuffer;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BoardHistory {
-    history: CircularBuffer<9, (Board, Option<ChessMove>)>,
+    history: CircularBuffer<12, (Board, Option<ChessMove>)>,
 }
 
 impl BoardHistory {
