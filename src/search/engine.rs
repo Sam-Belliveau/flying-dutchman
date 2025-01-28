@@ -18,8 +18,7 @@ use crate::transposition::table_entry::TTableEntry;
 
 use super::opponent_engine::OpponentEngine;
 
-const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
-const OPPONENT_EVAL_PLY: Depth = 2;
+const DEFAULT_TABLE_SIZE: usize = 4 * 1000 * 1000 * 1000;
 
 pub struct Engine {
     pub table: TTable,
@@ -93,7 +92,7 @@ impl Engine {
         }
 
         // Opponent Modeling to
-        if window.ply < OPPONENT_EVAL_PLY && window.opponent() {
+        if PV && window.opponent() {
             if let Some(opponent) = opponent_engine {
                 match opponent.get_move(board, deadline) {
                     Ok(opponent_move) => {

@@ -14,7 +14,7 @@ use crate::search::deadline::Deadline;
 
 use super::board_history::BoardHistory;
 
-const OPPONENT_CACHE_SIZE: usize = 1000 * 1000;
+const OPPONENT_CACHE_SIZE: usize = 10 * 1000 * 1000;
 
 /// Code adapted from UCI
 /// uci-0.2.3 uci::Engine
