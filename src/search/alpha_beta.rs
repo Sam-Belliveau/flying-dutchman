@@ -27,6 +27,11 @@ impl AlphaBeta {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.alpha = -MATE - CENTIPAWN;
+        self.beta = MATE + CENTIPAWN;
+    }
+
     pub fn null_move(&self) -> Self {
         Self {
             alpha: 0 - self.beta,

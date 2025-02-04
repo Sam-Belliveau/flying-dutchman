@@ -92,13 +92,14 @@ impl Engine {
         }
 
         // Opponent Modeling to
-        if (PV || window.ply < 2) && window.opponent() {
+        if (window.ply < 2 || depth >= 7) && window.opponent() {
             if let Some(opponent) = opponent_engine {
                 match opponent.get_move(board, deadline) {
                     Ok(opponent_move) => {
                         let mut moves = BestMoves::new();
 
                         let next = board.with_move(opponent_move);
+
                         let eval = -self
                             .ab_search::<PV>(&next, depth - 1, -window, deadline, opponent_engine)?
                             .score();
