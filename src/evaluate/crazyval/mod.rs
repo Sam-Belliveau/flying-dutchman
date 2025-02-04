@@ -13,10 +13,10 @@ const NEAR_KING: Score = CENTIPAWN / 4;
 // Value of being able to move to a vacant square
 const HOLD: Score = CENTIPAWN / 40;
 
-pub fn evaluate(board: &Board) -> Score {
+pub fn evaluate_for_white(board: &Board) -> Score {
     let mut score = 0;
 
-    score += pesto::evaluate(board);
+    score += pesto::evaluate_for_white(board);
     score += evaluate_moves(board);
 
     score

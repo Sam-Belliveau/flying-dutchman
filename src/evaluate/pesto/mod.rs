@@ -11,7 +11,7 @@ use crate::evaluate::pesto::psq_table::PieceSquareTable;
 
 use super::{Score, CENTIPAWN};
 
-pub fn evaluate(board: &Board) -> Score {
+pub fn evaluate_for_white(board: &Board) -> Score {
     let gamephase = GamePhase::new(board);
     let mut score = PhasedScore::new();
 
