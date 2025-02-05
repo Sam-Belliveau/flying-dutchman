@@ -31,7 +31,7 @@ impl AlphaBeta {
         Self {
             alpha: 0 - self.beta,
             beta: 1 - self.beta,
-            ply: self.ply + 1,
+            ply: self.ply,
         }
     }
 

@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use chess::{Board, ChessMove, EMPTY};
 
-use crate::evaluate::{evaluate, score_mark, weird_evaluate, Score, DRAW, MATE, MATE_CUTOFF};
+use crate::evaluate::{evaluate, score_mark, weirdval, Score, DRAW, MATE};
 
 use crate::search::alpha_beta::{AlphaBeta, NegaMaxResult::*};
 use crate::search::board_history::BoardHistory;
@@ -21,7 +21,7 @@ const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
 pub struct Engine {
     pub table: TTable,
     pub opponent_engine: Option<Box<Engine>>,
-    pub evaluation_fn: fn(&Board) -> Score,
+    pub custom_eval: Option<fn(&Board) -> Score>,
     nodes: usize,
 }
 
@@ -32,10 +32,10 @@ impl Engine {
             opponent_engine: Some(Box::new(Engine {
                 table: TTable::new(DEFAULT_TABLE_SIZE),
                 opponent_engine: None,
-                evaluation_fn: evaluate,
+                custom_eval: None,
                 nodes: 0,
             })),
-            evaluation_fn: weird_evaluate,
+            custom_eval: Some(weirdval::evaluate),
             nodes: 0,
         }
     }
@@ -43,7 +43,7 @@ impl Engine {
     pub fn ab_qsearch(&mut self, board: &Board, mut window: AlphaBeta) -> Score {
         let (mut best, movegen) = {
             if *board.checkers() == EMPTY {
-                let score = (self.evaluation_fn)(board);
+                let score = evaluate(board);
                 if let Pruned = window.negamax(score) {
                     return score_mark(score);
                 }
@@ -90,16 +90,9 @@ impl Engine {
             return TTableEntry::Edge(if window.opponent() { -DRAW } else { DRAW }).mark();
         }
 
-        // Quiescence Search
-        if depth <= 0 {
-            let eval = self.ab_qsearch(board.last(), window);
-            let entry = TTableEntry::Leaf(eval);
-            return entry.mark();
-        }
-
         // Opponent Modeling to
-        if let Some(opponent_engine) = &mut self.opponent_engine {
-            if window.opponent() {
+        if window.opponent() {
+            if let Some(opponent_engine) = &mut self.opponent_engine {
                 let opponent_eval =
                     opponent_engine.ab_search::<PV>(board, depth, AlphaBeta::new(), deadline)?;
 
@@ -116,10 +109,23 @@ impl Engine {
                     let entry = original_window.new_table_entry(depth, moves);
                     self.table.update::<PV>(board.last(), entry);
                     return entry.mark();
-                } else {
-                    self.table.update::<PV>(board.last(), opponent_eval);
-                    return Ok(opponent_eval);
                 }
+
+                self.table.update::<PV>(board.last(), opponent_eval);
+                return Ok(opponent_eval);
+            }
+        }
+
+        // Quiescence Search
+        if depth <= 0 {
+            if let Some(evaluator) = self.custom_eval {
+                let eval = evaluator(board.last());
+                let entry = TTableEntry::Leaf(eval);
+                return entry.mark();
+            } else {
+                let eval = self.ab_qsearch(board.last(), window);
+                let entry = TTableEntry::Leaf(eval);
+                return entry.mark();
             }
         }
 
@@ -132,7 +138,7 @@ impl Engine {
 
         // Null Move Pruning
         let r: Depth = 2;
-        if !PV && depth > r && window.span() > 1 && window.beta < MATE_CUTOFF {
+        if !PV && depth > r && window.span() > 1 {
             if let Some(null_board) = board.with_null_move() {
                 let null_eval = -self
                     .ab_search::<false>(&null_board, depth - r - 1, window.null_move(), deadline)?

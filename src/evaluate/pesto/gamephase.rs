@@ -2,6 +2,7 @@ use chess::{Board, Piece};
 
 use crate::evaluate::Score;
 
+#[derive(Clone, Copy, Debug)]
 pub struct GamePhase {
     mid_weight: Score,
     end_weight: Score,

@@ -17,13 +17,6 @@ pub fn evaluate(board: &Board) -> Score {
     }
 }
 
-pub fn weird_evaluate(board: &Board) -> Score {
-    match board.side_to_move() {
-        Color::White => ZERO + weirdval::evaluate_for_white(board),
-        Color::Black => ZERO - weirdval::evaluate_for_white(board),
-    }
-}
-
 fn evaluate_for_white(board: &Board) -> Score {
     let mut score = 0;
 
