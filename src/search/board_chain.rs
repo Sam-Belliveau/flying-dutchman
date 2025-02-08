@@ -1,4 +1,4 @@
-use chess::{Board, ChessMove};
+use chess::{BitBoard, Board, ChessMove, EMPTY};
 
 const REPETITION_SEARCH_DEPTH: usize = 9;
 
@@ -27,7 +27,12 @@ impl BoardChain<'static> {
 
     pub fn take_move(self, movement: ChessMove) -> BoardChain<'static> {
         let new_board = self.last().make_move_new(movement);
-        self.take_board(new_board)
+        let capture = self.last().combined() & BitBoard::from_square(movement.get_dest());
+        if capture != EMPTY {
+            BoardChain::new(new_board)
+        } else {
+            self.take_board(new_board)
+        }
     }
 }
 
@@ -69,7 +74,12 @@ impl<'a> BoardChain<'a> {
 
     pub fn with_move(&self, movement: ChessMove) -> BoardChain {
         let new_board = self.last().make_move_new(movement);
-        self.with_board(new_board)
+        let capture = self.last().combined() & BitBoard::from_square(movement.get_dest());
+        if capture != EMPTY {
+            BoardChain::new(new_board)
+        } else {
+            self.with_board(new_board)
+        }
     }
 
     pub fn with_null_move(&self) -> Option<BoardChain> {
