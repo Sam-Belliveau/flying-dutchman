@@ -1,7 +1,7 @@
 use chess::{Color, Piece};
 
-use crate::evaluate::Score;
 use crate::evaluate::pesto::gamephase::GamePhase;
+use crate::evaluate::Score;
 
 #[derive(Clone, Copy, Debug)]
 pub struct RawPhasedScore {
@@ -66,6 +66,13 @@ impl std::ops::AddAssign for PhasedScore {
     fn add_assign(&mut self, rhs: Self) {
         self.mid_game += rhs.mid_game;
         self.end_game += rhs.end_game;
+    }
+}
+
+impl std::ops::SubAssign for PhasedScore {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.mid_game -= rhs.mid_game;
+        self.end_game -= rhs.end_game;
     }
 }
 

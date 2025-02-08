@@ -94,7 +94,7 @@ impl Engine {
         if window.opponent() {
             if let Some(opponent_engine) = &mut self.opponent_engine {
                 let opponent_eval =
-                    opponent_engine.ab_search::<PV>(board, depth, AlphaBeta::new(), deadline)?;
+                    opponent_engine.ab_search::<PV>(board, depth.max(1), AlphaBeta::new(), deadline)?;
 
                 if let Some(opponent_move) = opponent_eval.peek() {
                     let mut moves = BestMoves::new();
