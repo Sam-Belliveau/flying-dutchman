@@ -3,7 +3,7 @@ use std::{
     thread,
 };
 
-use crate::search::board_history::BoardHistory;
+use crate::search::board_chain::BoardChain;
 use crate::search::deadline::Deadline;
 use crate::search::engine::Engine;
 
@@ -30,7 +30,7 @@ impl UCIThread {
 
     pub fn search_thread(
         engine: Arc<Mutex<Engine>>,
-        history: BoardHistory,
+        history: BoardChain<'static>,
         deadline: Arc<Deadline>,
         print_result: bool,
     ) -> thread::JoinHandle<()> {
@@ -59,7 +59,7 @@ impl UCIThread {
         })
     }
 
-    pub fn search(&mut self, history: &BoardHistory, deadline: Deadline) {
+    pub fn search<'a>(&mut self, history: &BoardChain<'static>, deadline: Deadline) {
         if let Some(thread) = self.search_thread.take() {
             if !thread.is_finished() {
                 panic!("Search thread already running");

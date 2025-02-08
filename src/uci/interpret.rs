@@ -9,12 +9,12 @@ use crate::uci::go_options::GoOptions;
 use crate::uci::thread::UCIThread;
 use crate::uci::tokens::UCIToken::{self, *};
 
-use crate::search::board_history::BoardHistory;
+use crate::search::board_chain::BoardChain;
 use crate::tests;
 
 pub fn uci_loop() {
     let mut thread = UCIThread::new();
-    let mut history = BoardHistory::new(Board::default());
+    let mut history = BoardChain::new(Board::default());
 
     let stdin = io::stdin();
     loop {
@@ -58,12 +58,12 @@ pub fn uci_loop() {
                     for _ in lexer.by_ref() {}
 
                     if info.starts_with("startpos") {
-                        history = BoardHistory::new(Board::default());
+                        history = BoardChain::new(Board::default());
                         if info.starts_with("startpos moves") {
                             let moves = info.trim_start_matches("startpos moves ");
                             for chess_move in moves.split_whitespace() {
                                 if let Ok(chess_move) = ChessMove::from_str(chess_move) {
-                                    history = history.with_move(chess_move);
+                                    history = history.take_move(chess_move);
                                 }
                             }
                         }
@@ -71,15 +71,15 @@ pub fn uci_loop() {
                         let fen = info.trim_start_matches("fen ");
                         if let Ok(new_board) = Board::from_str(fen.trim()) {
                             if new_board == Board::default() {
-                                history = BoardHistory::new(new_board);
+                                history = BoardChain::new(new_board);
                             } else {
-                                history = history.with_board(new_board);
+                                history = history.take_board(new_board);
                             }
                         }
 
                         for chess_move in fen.split_whitespace() {
                             if let Ok(chess_move) = ChessMove::from_str(chess_move) {
-                                history = history.with_move(chess_move);
+                                history = history.take_move(chess_move);
                             }
                         }
                     }

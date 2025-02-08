@@ -2,7 +2,7 @@ use std::io::{self, Write};
 use std::time::Instant;
 
 use crate::evaluate::score_to_str;
-use crate::search::board_history::BoardHistory;
+use crate::search::board_chain::BoardChain;
 use crate::search::engine::Engine;
 
 pub fn stdout_sync() {
@@ -31,7 +31,7 @@ macro_rules! uci_end {
     };
 }
 
-pub fn board_information(engine: &mut Engine, history: &BoardHistory, search_start: Instant) {
+pub fn board_information(engine: &mut Engine, history: &BoardChain, search_start: Instant) {
     let board_info = engine.min_search(history);
 
     let time_nano = search_start.elapsed().as_nanos() as usize + 1;
@@ -65,7 +65,7 @@ pub fn board_information(engine: &mut Engine, history: &BoardHistory, search_sta
     uci_end!();
 }
 
-pub fn board_best_move(engine: &mut Engine, board: &BoardHistory) {
+pub fn board_best_move(engine: &mut Engine, board: &BoardChain) {
     let board_info = engine.min_search(board);
 
     if let Some(bestmove) = board_info.peek() {

@@ -5,7 +5,7 @@ use chess::{Board, ChessMove, EMPTY};
 use crate::evaluate::{evaluate, score_mark, Score, DRAW, MATE, MATE_CUTOFF};
 
 use crate::search::alpha_beta::{AlphaBeta, NegaMaxResult::*};
-use crate::search::board_history::BoardHistory;
+use crate::search::board_chain::BoardChain;
 use crate::search::deadline::Deadline;
 use crate::search::movegen::OrderedMoveGen;
 use crate::search::Depth;
@@ -17,9 +17,6 @@ use crate::transposition::table::{TTable, TTableSample};
 use crate::transposition::table_entry::TTableEntry;
 
 const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
-
-const OPPONENT_EVAL_DEPTH: Depth = 1;
-const OPPONENT_EVAL_PLY: Depth = 2;
 
 pub struct Engine {
     pub table: TTable,
@@ -72,7 +69,7 @@ impl Engine {
 
     fn ab_search<const PV: bool>(
         &mut self,
-        board: &BoardHistory,
+        board: &BoardChain,
         depth: Depth,
         mut window: AlphaBeta,
         deadline: &Deadline,
@@ -98,24 +95,39 @@ impl Engine {
         }
 
         // Opponent Modeling to
-        if let Some(opponent_engine) = &mut self.opponent_engine {
-            if window.ply < OPPONENT_EVAL_PLY && window.opponent() {
+        if window.opponent() {
+            if let Some(opponent_engine) = &mut self.opponent_engine {
+                // Get the top 3 moves that result from a depth 1 search.
+                // Idea being that a human is likely to pick the best from the moves
+                // that seem immediately good, so we should model the opponent as doing the same.
                 let opponent_eval = opponent_engine.ab_search::<PV>(
                     board,
-                    OPPONENT_EVAL_DEPTH.min(depth),
+                    depth.min(1),
                     AlphaBeta::new(),
                     deadline,
                 )?;
 
-                if let Some(opponent_move) = opponent_eval.peek() {
+                if let Some(opponent_moves) = opponent_eval.moves() {
                     let mut moves = BestMoves::new();
+                    for opponent_move in *opponent_moves {
+                        let next = board.with_move(opponent_move);
 
-                    let next = board.with_move(opponent_move);
-                    let eval = -self
-                        .ab_search::<PV>(&next, depth - 1, -window, deadline)?
-                        .score();
+                        let eval = if PV && moves.is_none() {
+                            -self
+                                .ab_search::<PV>(&next, depth - 1, -window, deadline)?
+                                .score()
+                        } else {
+                            -self
+                                .ab_search::<false>(&next, depth - 1, -window, deadline)?
+                                .score()
+                        };
 
-                    moves.push(RatedMove::new(eval, opponent_move));
+                        moves.push(RatedMove::new(eval, opponent_move));
+
+                        if let Pruned = window.negamax(eval) {
+                            break;
+                        }
+                    }
 
                     let entry = original_window.new_table_entry(depth, moves);
                     self.table.update::<PV>(board.last(), entry);
@@ -217,7 +229,7 @@ impl Engine {
         entry.mark()
     }
 
-    pub fn min_search(&mut self, history: &BoardHistory) -> TTableEntry {
+    pub fn min_search(&mut self, history: &BoardChain) -> TTableEntry {
         return self
             .ab_search::<false>(&history, 1, AlphaBeta::new(), &Deadline::none())
             .expect("Expected Complete Search");
@@ -229,7 +241,7 @@ impl Engine {
 
     pub fn iterative_deepening_search(
         &mut self,
-        history: &BoardHistory,
+        history: &BoardChain,
         deadline: &Deadline,
     ) -> Result<TTableEntry, ()> {
         let depth = match self.min_search(&history) {
@@ -251,7 +263,7 @@ impl Engine {
         }
     }
 
-    pub fn best_move(&mut self, history: &BoardHistory) -> Option<ChessMove> {
+    pub fn best_move(&mut self, history: &BoardChain) -> Option<ChessMove> {
         self.min_search(&history).peek()
     }
 

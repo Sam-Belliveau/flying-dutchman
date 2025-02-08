@@ -4,7 +4,7 @@ use chess::{Board, Color};
 
 use crate::evaluate::score_to_str;
 
-use crate::search::board_history::BoardHistory;
+use crate::search::board_chain::BoardChain;
 use crate::search::deadline::Deadline;
 use crate::search::engine::Engine;
 
@@ -27,7 +27,7 @@ pub fn play_self() {
     let mut engine = Engine::new();
     engine.table.set_table_size(16000000000);
 
-    let mut board = BoardHistory::new(Board::default());
+    let mut board = BoardChain::new(Board::default());
 
     let mut turn = 0;
     let mut game = String::from("");
@@ -76,7 +76,7 @@ pub fn play_self() {
             );
             println!("Memory Bytes: {}", engine.memory_bytes());
             print!("\n\n");
-            board = board.with_move(choice);
+            board = board.take_move(choice);
         } else {
             println!();
             match board.last().status() {
