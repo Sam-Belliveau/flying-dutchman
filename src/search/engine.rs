@@ -43,7 +43,12 @@ impl Engine {
     pub fn ab_qsearch(&mut self, board: &Board, mut window: AlphaBeta) -> Score {
         let (mut best, movegen) = {
             if *board.checkers() == EMPTY {
-                let score = evaluate(board);
+                let score = if let Some(evaluator) = self.custom_eval {
+                    evaluator(board)
+                } else {
+                    evaluate(board)
+                };
+
                 if let Pruned = window.negamax(score) {
                     return score_mark(score);
                 }
@@ -93,8 +98,12 @@ impl Engine {
         // Opponent Modeling to
         if window.opponent() {
             if let Some(opponent_engine) = &mut self.opponent_engine {
-                let opponent_eval =
-                    opponent_engine.ab_search::<PV>(board, depth.max(1), AlphaBeta::new(), deadline)?;
+                let opponent_eval = opponent_engine.ab_search::<PV>(
+                    board,
+                    depth.max(1),
+                    AlphaBeta::new(),
+                    deadline,
+                )?;
 
                 if let Some(opponent_move) = opponent_eval.peek() {
                     let mut moves = BestMoves::new();
@@ -118,15 +127,9 @@ impl Engine {
 
         // Quiescence Search
         if depth <= 0 {
-            if let Some(evaluator) = self.custom_eval {
-                let eval = evaluator(board.last());
-                let entry = TTableEntry::Leaf(eval);
-                return entry.mark();
-            } else {
-                let eval = self.ab_qsearch(board.last(), window);
-                let entry = TTableEntry::Leaf(eval);
-                return entry.mark();
-            }
+            let eval = self.ab_qsearch(board.last(), window);
+            let entry = TTableEntry::Leaf(eval);
+            return entry.mark();
         }
 
         // Transposition Table Lookup
