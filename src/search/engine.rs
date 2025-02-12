@@ -1,8 +1,8 @@
 use std::time::Instant;
 
-use chess::{Board, ChessMove, EMPTY};
+use chess::{BitBoard, Board, ChessMove, Piece, EMPTY};
 
-use crate::evaluate::{evaluate, score_mark, weirdval, Score, DRAW, MATE};
+use crate::evaluate::{evaluate, score_mark, weirdval, Score, CENTIPAWN, DRAW, MATE};
 
 use crate::search::alpha_beta::{AlphaBeta, NegaMaxResult::*};
 use crate::search::board_history::BoardHistory;
@@ -21,7 +21,6 @@ const DEFAULT_TABLE_SIZE: usize = 1000 * 1000 * 1000;
 pub struct Engine {
     pub table: TTable,
     pub opponent_engine: Option<Box<Engine>>,
-    pub custom_eval: Option<fn(&Board) -> Score>,
     nodes: usize,
 }
 
@@ -32,10 +31,8 @@ impl Engine {
             opponent_engine: Some(Box::new(Engine {
                 table: TTable::new(DEFAULT_TABLE_SIZE),
                 opponent_engine: None,
-                custom_eval: None,
                 nodes: 0,
             })),
-            custom_eval: Some(weirdval::evaluate),
             nodes: 0,
         }
     }
@@ -43,11 +40,7 @@ impl Engine {
     pub fn ab_qsearch(&mut self, board: &Board, mut window: AlphaBeta) -> Score {
         let (mut best, movegen) = {
             if *board.checkers() == EMPTY {
-                let score = if let Some(evaluator) = self.custom_eval {
-                    evaluator(board)
-                } else {
-                    evaluate(board)
-                };
+                let score = evaluate(board);
 
                 if let Pruned = window.negamax(score) {
                     return score_mark(score);
@@ -170,7 +163,7 @@ impl Engine {
                     if depth < 3 || move_count <= 3 || check || *next.last().checkers() != EMPTY {
                         0
                     } else if movement.get_promotion().is_some()
-                        || board.last().piece_on(movement.get_dest()).is_some()
+                        || (board.last().combined() & BitBoard::from_square(movement.get_dest())) != EMPTY
                     {
                         (0.7 + 0.3 * (depth as f64).ln_1p() + 0.3 * (move_count as f64).ln_1p())
                             as Depth
@@ -193,7 +186,25 @@ impl Engine {
                 }
             };
 
-            moves.push(RatedMove::new(eval, movement));
+            let bonus = if self.opponent_engine.is_some() {
+                (match board.last().piece_on(movement.get_dest()) {
+                    Some(Piece::Pawn) => 100 * CENTIPAWN,
+                    Some(Piece::Knight) => 300 * CENTIPAWN,
+                    Some(Piece::Bishop) => 300 * CENTIPAWN,
+                    Some(Piece::Rook) => 500 * CENTIPAWN,
+                    Some(Piece::Queen) => 900 * CENTIPAWN,
+                    Some(Piece::King) => 10000 * CENTIPAWN,
+                    None => 0,
+                }) + (if *next.last().checkers() == EMPTY {
+                    0
+                } else {
+                    1000 * CENTIPAWN
+                })
+            } else {
+                0
+            };
+
+            moves.push(RatedMove::new(eval + bonus, movement));
             if let Pruned = window.negamax(eval) {
                 break;
             }
