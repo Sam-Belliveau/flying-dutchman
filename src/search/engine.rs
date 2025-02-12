@@ -95,14 +95,14 @@ impl Engine {
         }
 
         // Opponent Modeling to
-        if window.opponent() {
+        if window.opponent() && depth > 7 {
             if let Some(opponent_engine) = &mut self.opponent_engine {
                 // Get the top 3 moves that result from a depth 1 search.
                 // Idea being that a human is likely to pick the best from the moves
                 // that seem immediately good, so we should model the opponent as doing the same.
                 let opponent_eval = opponent_engine.ab_search::<PV>(
                     board,
-                    depth.min(1),
+                    depth.min(2),
                     AlphaBeta::new(),
                     deadline,
                 )?;
@@ -129,7 +129,7 @@ impl Engine {
                         }
                     }
 
-                    let entry = original_window.new_table_entry(depth, moves);
+                    let entry = window.new_table_entry(depth, moves);
                     self.table.update::<PV>(board.last(), entry);
                     return entry.mark();
                 } else {
